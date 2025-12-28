@@ -1,309 +1,207 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>iOS Cardboard VR - Rear Camera with Enhanced 3D Pop Filter</title>
-    <style>
-        body { margin: 0; overflow: hidden; background: black; }
-        #container {
-            position: absolute;
-            width: 100%; height: 100%;
-            perspective: 800px;
-        }
-        .eye {
-            position: absolute;
-            width: 50%; height: 100%;
-            overflow: hidden;
-            transform-style: preserve-3d;
-        }
-        #leftEye { left: 0; }
-        #rightEye { right: 0; }
-        video {
-            position: absolute;
-            top: 50%; left: 50%;
-            width: 100%; height: 100%;
-            object-fit: contain;
-            transform: translate(-50%, -50%);
-            transition: transform 0.1s ease-out, filter 0.4s ease;
-            background: black;
-            /* iOS Safari safe filter chain */
-            -webkit-filter: none;
-            filter: none;
-        }
-        #startButton {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            padding: 20px 40px; font-size: 24px; background: rgba(0,0,0,0.7); color: white;
-            border: 2px solid white; border-radius: 10px; z-index: 20;
-        }
-        .lens {
-            position: absolute;
-            width: 100%; height: 100%;
-            background: radial-gradient(circle, transparent 25%, rgba(0,0,0,0.8) 85%);
-            pointer-events: none;
-        }
-
-        /* Corner tap zones */
-        .corner-tap {
-            position: absolute;
-            width: 150px;
-            height: 150px;
-            z-index: 20;
-        }
-        #topLeft { top: 0; left: 0; }
-        #topRight { top: 0; right: 0; }
-        #bottomLeft { bottom: 0; left: 0; }
-        #bottomRight { bottom: 0; right: 0; }
-
-        /* Menu */
-        #controlMenu {
-            position: absolute;
-            bottom: 40px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.85);
-            padding: 30px 35px;
-            border-radius: 25px;
-            z-index: 30;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0.3s;
-            text-align: center;
-            color: white;
-            font-family: -apple-system, sans-serif;
-            max-width: 95%;
-            box-sizing: border-box;
-        }
-        #controlMenu.visible {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .section {
-            margin-bottom: 30px;
-        }
-        label {
-            display: block;
-            margin-bottom: 12px;
-            font-size: 22px;
-            font-weight: bold;
-        }
-        #zoomSlider {
-            width: 380px;
-            max-width: 90vw;
-            height: 12px;
-            border-radius: 6px;
-            background: #333;
-            outline: none;
-            -webkit-appearance: none;
-        }
-        #zoomSlider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: white;
-            box-shadow: 0 0 15px rgba(255,255,255,0.6);
-        }
-        #zoomValue {
-            margin-top: 10px;
-            font-size: 20px;
-        }
-
-        #filterButtons {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 12px;
-        }
-        .filter-btn {
-            padding: 14px 22px;
-            background: rgba(255,255,255,0.15);
-            border: 1px solid rgba(255,255,255,0.3);
-            border-radius: 15px;
-            font-size: 18px;
-            min-width: 110px;
-            transition: all 0.3s;
-        }
-        .filter-btn.active {
-            background: rgba(255,255,255,0.5);
-            border-color: white;
-            box-shadow: 0 0 15px rgba(255,255,255,0.7);
-            transform: scale(1.05);
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Hand Tracking – Menu Spawns Upright</title>
+  <style>
+    body { margin: 0; background: black; overflow: hidden; }
+    #container { position: relative; width: 100vw; height: 100vh; }
+    #video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+    #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+    #status {
+      position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+      color: white; background: rgba(0,0,0,0.6); padding: 10px 20px;
+      border-radius: 12px; font-family: -apple-system, sans-serif; font-size: 16px; z-index: 10;
+    }
+    #menu {
+      position: absolute; pointer-events: none; opacity: 0; transition: opacity 0.4s ease;
+      padding: 25px; background: rgba(255,255,255,0.12); backdrop-filter: blur(15px);
+      border-radius: 24px; box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+      border: 1px solid rgba(255,255,255,0.25); text-align: center; color: white;
+      font-family: -apple-system, sans-serif; font-weight: bold; font-size: 26px;
+      z-index: 10; transform-origin: center;
+    }
+    #menu.visible { opacity: 1; pointer-events: auto; }
+    .menu-item {
+      margin: 18px 0; padding: 18px; background: rgba(255,255,255,0.18);
+      border-radius: 16px; cursor: pointer; transition: background 0.2s;
+    }
+    .menu-item:active { background: rgba(255,255,255,0.4); }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.js" crossorigin="anonymous"></script>
 </head>
 <body>
-    <div id="container">
-        <div id="leftEye" class="eye">
-            <video id="videoLeft" autoplay playsinline muted></video>
-            <div class="lens"></div>
-        </div>
-        <div id="rightEye" class="eye">
-            <video id="videoRight" autoplay playsinline muted></video>
-            <div class="lens"></div>
-        </div>
+  <div id="container">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="canvas"></canvas>
+    <div id="status">Loading model...</div>
+    <div id="menu">
+      <div>AR Menu</div>
+      <div class="menu-item">Action 1</div>
+      <div class="menu-item">Action 2</div>
+      <div class="menu-item">Action 3</div>
+      <div class="menu-item">Close / Pinch Again</div>
     </div>
+  </div>
 
-    <div class="corner-tap" id="topLeft"></div>
-    <div class="corner-tap" id="topRight"></div>
-    <div class="corner-tap" id="bottomLeft"></div>
-    <div class="corner-tap" id="bottomRight"></div>
+  <script type="module">
+    import { HandLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.js";
 
-    <div id="controlMenu">
-        <div class="section">
-            <label>Field of View</label>
-            <input type="range" id="zoomSlider" min="1.0" max="4.0" step="0.05" value="2.0">
-            <div id="zoomValue">FOV: Normal</div>
-        </div>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const status = document.getElementById('status');
+    const menu = document.getElementById('menu');
 
-        <div class="section">
-            <label>Fun Filters 🎉</label>
-            <div id="filterButtons">
-                <button class="filter-btn active" data-filter="none">Normal</button>
-                <button class="filter-btn" data-filter="neon">Neon Glow</button>
-                <button class="filter-btn" data-filter="pop3d">Pop 3D</button>
-                <button class="filter-btn" data-filter="thermal">Thermal Vision</button>
-                <button class="filter-btn" data-filter="glitch">Glitch</button>
-                <button class="filter-btn" data-filter="rainbow">Rainbow</button>
-                <button class="filter-btn" data-filter="night">Night Vision</button>
-                <button class="filter-btn" data-filter="vibrant">Vibrant</button>
-            </div>
-        </div>
-    </div>
+    const HAND_CONNECTIONS = [
+      [0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],
+      [0,9],[9,10],[10,11],[11,12],[0,13],[13,14],[14,15],[15,16],
+      [0,17],[17,18],[18,19],[19,20]
+    ];
 
-    <button id="startButton">Tap to Start Rear Camera</button>
+    function drawSkeleton(landmarks) {
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = '#00FFAA';
+      ctx.strokeStyle = '#00FFAA';
+      ctx.lineWidth = 10;
+      ctx.lineCap = 'round';
+      for (const [i, j] of HAND_CONNECTIONS) {
+        const a = landmarks[i];
+        const b = landmarks[j];
+        ctx.beginPath();
+        ctx.moveTo(a.x * canvas.width, a.y * canvas.height);
+        ctx.lineTo(b.x * canvas.width, b.y * canvas.height);
+        ctx.stroke();
+      }
 
-    <script>
-        const videoLeft = document.getElementById('videoLeft');
-        const videoRight = document.getElementById('videoRight');
-        const startButton = document.getElementById('startButton');
-        const controlMenu = document.getElementById('controlMenu');
-        const zoomSlider = document.getElementById('zoomSlider');
-        const zoomValue = document.getElementById('zoomValue');
-        const filterButtons = document.querySelectorAll('.filter-btn');
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = '#FF3366';
+      ctx.fillStyle = '#FF3366';
+      for (const lm of landmarks) {
+        ctx.beginPath();
+        ctx.arc(lm.x * canvas.width, lm.y * canvas.height, 16, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+      ctx.shadowBlur = 0;
+    }
 
-        const cornerTaps = document.querySelectorAll('.corner-tap');
+    let menuOpen = false;
+    let lastPinch = false;
 
-        let currentScale = 2.0;
-        let currentFilter = 'none';
+    function updateMenu(landmarks) {
+      const thumb = landmarks[4];   // Thumb tip
+      const index = landmarks[8];  // Index finger tip
 
-        const filters = {
-            none: 'none',
-            neon: 'brightness(1.3) contrast(1.5) saturate(200%) hue-rotate(180deg)',
-            pop3d: 'contrast(170%) saturate(170%) brightness(105%)',
-            thermal: 'sepia(100%) hue-rotate(180deg) invert(100%) brightness(120%)',
-            glitch: 'hue-rotate(90deg) saturate(300%) contrast(200%)',
-            rainbow: 'hue-rotate(0deg) saturate(300%) brightness(120%)',
-            night: 'brightness(80%) contrast(150%) sepia(30%) hue-rotate(120deg)',
-            vibrant: 'saturate(200%) contrast(140%) brightness(110%)'
+      // Center between the two pinch points
+      const centerX = (thumb.x + index.x) / 2;
+      const centerY = (thumb.y + index.y) / 2;
+
+      menu.style.left = `${centerX * 100}%`;
+      menu.style.top = `${centerY * 100}%`;
+
+      // 3D depth scaling
+      const wristZ = landmarks[0].z;
+      const depth = -wristZ;
+      let scale = 0.6 + depth * 6;
+      scale = Math.max(0.5, Math.min(2.5, scale));
+
+      // Force upright orientation – menu always spawns and stays readable
+      menu.style.transform = `translate(-50%, -50%) scale(${scale}) rotate(0deg)`;
+    }
+
+    async function startCamera() {
+      const constraints = {
+        video: {
+          facingMode: "environment",
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        }
+      };
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = stream;
+        video.onloadedmetadata = () => {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          video.play();
+          setupHandTracking();
         };
+      } catch (err) {
+        status.textContent = "Camera access denied";
+        console.error(err);
+      }
+    }
 
-        // Add subtle glowing edge enhancement for Pop 3D using multiple shadows (iOS compatible)
-        const pop3dExtra = 'drop-shadow(2px 2px 4px #fff) drop-shadow(-2px -2px 4px #0ff) drop-shadow(0 0 8px #fff)';
+    async function setupHandTracking() {
+      try {
+        const vision = await FilesetResolver.forVisionTasks(
+          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+        );
 
-        // Rainbow animation
-        let hue = 0;
-        setInterval(() => {
-            if (currentFilter === 'rainbow') {
-                hue = (hue + 2) % 360;
-                const rainbowFilter = `hue-rotate(${hue}deg) saturate(300%) brightness(120%)`;
-                videoLeft.style.filter = rainbowFilter;
-                videoRight.style.filter = rainbowFilter;
+        const handLandmarker = await HandLandmarker.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+            delegate: "GPU"
+          },
+          runningMode: "VIDEO",
+          numHands: 1,
+          minHandDetectionConfidence: 0.8,
+          minHandPresenceConfidence: 0.8,
+          minTrackingConfidence: 0.8
+        });
+
+        status.textContent = "Ready! Pinch thumb + index to open menu";
+
+        function predict() {
+          if (video.readyState >= video.HAVE_ENOUGH_DATA) {
+            const timestamp = performance.now();
+
+            const results = handLandmarker.detectForVideo(video, timestamp);
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (results.landmarks && results.landmarks.length > 0) {
+              const landmarks = results.landmarks[0];
+              drawSkeleton(landmarks);
+
+              const thumb = landmarks[4];
+              const index = landmarks[8];
+              const dist = Math.hypot(thumb.x - index.x, thumb.y - index.y, thumb.z - index.z);
+              const pinching = dist < 0.06;
+
+              if (pinching && !lastPinch) {
+                menuOpen = !menuOpen;
+                menu.classList.toggle('visible', menuOpen);
+                status.textContent = menuOpen ? "Menu open!" : "Menu closed";
+              }
+              lastPinch = pinching;
+
+              if (menuOpen) {
+                updateMenu(landmarks);
+              }
+
+              status.textContent = pinching ? "Pinch detected!" : "Tracking hand";
+            } else {
+              menu.classList.remove('visible');
+              menuOpen = false;
+              lastPinch = false;
+              status.textContent = "No hand detected – palm toward camera";
             }
-        }, 50);
+          }
 
-        function updateView() {
-            const scale = `scale(${currentScale})`;
-            let baseFilter = filters[currentFilter];
-
-            let finalFilter = baseFilter;
-
-            // Special enhancement for Pop 3D
-            if (currentFilter === 'pop3d') {
-                finalFilter = baseFilter + ' ' + pop3dExtra;
-            }
-
-            if (currentFilter === 'rainbow') {
-                finalFilter = `hue-rotate(0deg) saturate(300%) brightness(120%)`;
-            }
-
-            const transform = `translate(-50%, -50%) ${scale}`;
-            videoLeft.style.transform = transform;
-            videoRight.style.transform = transform;
-
-            // Use both filter and -webkit-filter for maximum iOS compatibility
-            videoLeft.style.filter = finalFilter;
-            videoLeft.style.webkitFilter = finalFilter;
-            videoRight.style.filter = finalFilter;
-            videoRight.style.webkitFilter = finalFilter;
-
-            // Update FOV text
-            if (currentScale < 1.3) zoomValue.textContent = "FOV: Very Wide";
-            else if (currentScale < 1.7) zoomValue.textContent = "FOV: Wide";
-            else if (currentScale < 2.3) zoomValue.textContent = "FOV: Normal";
-            else zoomValue.textContent = "FOV: Narrow";
+          requestAnimationFrame(predict);
         }
 
-        function toggleMenu() {
-            controlMenu.classList.toggle('visible');
-        }
+        predict();
+      } catch (err) {
+        status.textContent = "Model failed to load";
+        console.error(err);
+      }
+    }
 
-        cornerTaps.forEach(corner => {
-            corner.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                toggleMenu();
-            });
-        });
-
-        zoomSlider.addEventListener('input', () => {
-            currentScale = parseFloat(zoomSlider.value);
-            updateView();
-        });
-
-        filterButtons.forEach(btn => {
-            btn.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                filterButtons.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                currentFilter = btn.dataset.filter;
-                updateView();
-            });
-        });
-
-        async function startCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: "environment",
-                        width: { ideal: 4096 },
-                        height: { ideal: 3072 }
-                    }
-                });
-
-                videoLeft.srcObject = stream;
-                videoRight.srcObject = stream;
-
-                await videoLeft.play();
-                await videoRight.play();
-
-                startButton.style.display = 'none';
-                document.body.requestFullscreen?.();
-
-                updateView();
-
-            } catch (err) {
-                startButton.textContent = "Error: " + err.message;
-                console.error(err);
-            }
-        }
-
-        startButton.addEventListener('click', startCamera);
-
-        document.addEventListener('touchstart', function reqFS() {
-            document.body.requestFullscreen?.();
-            document.removeEventListener('touchstart', reqFS);
-        });
-    </script>
+    startCamera();
+  </script>
 </body>
 </html>
