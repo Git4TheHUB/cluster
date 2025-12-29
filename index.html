@@ -3,56 +3,294 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Hand Tracking – Menu Spawns Upright</title>
+  <title>Ultra-Realistic 3D Virtual World – Visible Clouds + Persistent Gyro</title>
   <style>
     body { margin: 0; background: black; overflow: hidden; }
-    #container { position: relative; width: 100vw; height: 100vh; }
-    #video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
-    #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-    #status {
-      position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-      color: white; background: rgba(0,0,0,0.6); padding: 10px 20px;
-      border-radius: 12px; font-family: -apple-system, sans-serif; font-size: 16px; z-index: 10;
+    #container { 
+      position: relative; 
+      width: 100vw; 
+      height: 100vh; 
+      display: flex; 
     }
-    #menu {
-      position: absolute; pointer-events: none; opacity: 0; transition: opacity 0.4s ease;
-      padding: 25px; background: rgba(255,255,255,0.12); backdrop-filter: blur(15px);
-      border-radius: 24px; box-shadow: 0 15px 40px rgba(0,0,0,0.6);
-      border: 1px solid rgba(255,255,255,0.25); text-align: center; color: white;
-      font-family: -apple-system, sans-serif; font-weight: bold; font-size: 26px;
-      z-index: 10; transform-origin: center;
+    .eye { 
+      width: 50vw; 
+      height: 100vh; 
+      overflow: hidden; 
+      position: relative; 
     }
-    #menu.visible { opacity: 1; pointer-events: auto; }
-    .menu-item {
-      margin: 18px 0; padding: 18px; background: rgba(255,255,255,0.18);
-      border-radius: 16px; cursor: pointer; transition: background 0.2s;
+    video { 
+      position: absolute; 
+      top: 0; left: 0;
+      width: 100%; height: 100%; 
+      object-fit: cover; 
+      z-index: 1;
+      transition: opacity 0.6s ease;
     }
-    .menu-item:active { background: rgba(255,255,255,0.4); }
+    canvas { 
+      position: absolute; 
+      top: 0; left: 0;
+      width: 100%; height: 100%; 
+    }
+    .three-canvas { z-index: 2; opacity: 0; transition: opacity 0.6s ease; }
+    .three-canvas.active { opacity: 1; }
+    .hand-canvas { z-index: 3; }
+    .status {
+      position: absolute; 
+      top: 20px; 
+      left: 50%; 
+      transform: translateX(-50%);
+      color: white; 
+      background: rgba(50,50,50,0.7); 
+      padding: 10px 20px;
+      border-radius: 12px; 
+      font-size: 16px;
+      pointer-events: none;
+      font-family: -apple-system, sans-serif; 
+      z-index: 20;
+    }
   </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.js"
+    }
+  }
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.js" crossorigin="anonymous"></script>
 </head>
 <body>
   <div id="container">
-    <video id="video" autoplay playsinline muted></video>
-    <canvas id="canvas"></canvas>
-    <div id="status">Loading model...</div>
-    <div id="menu">
-      <div>AR Menu</div>
-      <div class="menu-item">Action 1</div>
-      <div class="menu-item">Action 2</div>
-      <div class="menu-item">Action 3</div>
-      <div class="menu-item">Close / Pinch Again</div>
+    <!-- Left Eye -->
+    <div class="eye">
+      <video id="videoLeft" autoplay playsinline muted></video>
+      <canvas id="threeLeft" class="three-canvas"></canvas>
+      <canvas id="handLeft" class="hand-canvas"></canvas>
+      <div class="status" id="statusLeft">Tap screen to enable gyro – Double pinch to enter</div>
+    </div>
+    <!-- Right Eye -->
+    <div class="eye">
+      <video id="videoRight" autoplay playsinline muted></video>
+      <canvas id="threeRight" class="three-canvas"></canvas>
+      <canvas id="handRight" class="hand-canvas"></canvas>
+      <div class="status" id="statusRight">Tap screen to enable gyro – Double pinch to enter</div>
     </div>
   </div>
 
   <script type="module">
+    import * as THREE from 'three';
     import { HandLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.js";
 
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    const status = document.getElementById('status');
-    const menu = document.getElementById('menu');
+    const videoLeft = document.getElementById('videoLeft');
+    const videoRight = document.getElementById('videoRight');
+    const threeLeft = document.getElementById('threeLeft');
+    const threeRight = document.getElementById('threeRight');
+    const handCanvasLeft = document.getElementById('handLeft');
+    const handCanvasRight = document.getElementById('handRight');
+    const ctxLeft = handCanvasLeft.getContext('2d');
+    const ctxRight = handCanvasRight.getContext('2d');
+
+    const statusLeft = document.getElementById('statusLeft');
+    const statusRight = document.getElementById('statusRight');
+
+    let virtualMode = false;
+    let rendererLeft, rendererRight, sceneLeft, sceneRight, cameraLeft, cameraRight;
+    let cameraGroupLeft, cameraGroupRight;
+
+    // === GYRO – NOW ALWAYS ACTIVE (even in real world background) ===
+    let gyroActive = false;
+
+    function enableGyro() {
+      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission()
+          .then(response => {
+            if (response === 'granted') {
+              window.addEventListener('deviceorientation', handleOrientation);
+              gyroActive = true;
+              statusLeft.textContent = "Gyro active – Double pinch to enter";
+              statusRight.textContent = "Gyro active – Double pinch to enter";
+            }
+          })
+          .catch(console.error);
+      } else {
+        window.addEventListener('deviceorientation', handleOrientation);
+        gyroActive = true;
+        statusLeft.textContent = "Gyro active – Double pinch to enter";
+        statusRight.textContent = "Gyro active – Double pinch to enter";
+      }
+    }
+
+    document.body.addEventListener('touchend', enableGyro, { once: true });
+
+    function handleOrientation(event) {
+      if (!gyroActive || event.alpha === null) return;
+
+      const yaw = THREE.MathUtils.degToRad(event.alpha);
+      const pitch = THREE.MathUtils.degToRad(Math.max(-80, Math.min(80, event.beta)));
+      const roll = THREE.MathUtils.degToRad(event.gamma);
+
+      const euler = new THREE.Euler(pitch, yaw, -roll, 'YXZ');
+      const quat = new THREE.Quaternion().setFromEuler(euler);
+
+      // Always update camera orientation — even when virtual world is hidden
+      cameraGroupLeft.quaternion.copy(quat);
+      cameraGroupRight.quaternion.copy(quat);
+    }
+
+    // === HYPER-REALISTIC VISIBLE CLOUDS ===
+    function addRealisticClouds(scene) {
+      const cloudTexture = new THREE.TextureLoader().load('https://threejs.org/examples/textures/sprites/cloud10.png');
+      const cloudMaterial = new THREE.SpriteMaterial({
+        map: cloudTexture,
+        transparent: true,
+        opacity: 0.85,
+        depthWrite: false,
+        blending: THREE.NormalBlending,
+        color: 0xffffff
+      });
+
+      const clouds = [];
+      for (let i = 0; i < 100; i++) {
+        const sprite = new THREE.Sprite(cloudMaterial.clone());
+        const scale = 15 + Math.random() * 35;
+        sprite.scale.set(scale, scale * 0.4, 1);
+        sprite.position.set(
+          (Math.random() - 0.5) * 800,
+          25 + Math.random() * 40,
+          (Math.random() - 0.5) * 800
+        );
+        // Slight tint variation for realism
+        sprite.material.color.setHSL(0, 0, 0.95 + Math.random() * 0.05);
+        scene.add(sprite);
+        clouds.push(sprite);
+      }
+
+      // Slow drifting animation
+      function animateClouds() {
+        clouds.forEach(c => {
+          c.position.x += 0.03 + Math.random() * 0.02;
+          if (c.position.x > 400) c.position.x = -400;
+        });
+      }
+
+      return animateClouds;
+    }
+
+    function createVirtualScene(canvas) {
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x87CEEB);
+      scene.fog = new THREE.FogExp2(0x87CEEB, 0.0006);
+
+      const camera = new THREE.PerspectiveCamera(60, canvas.clientWidth / canvas.clientHeight, 0.1, 1500);
+      camera.position.set(0, 1.6, 0);
+
+      const cameraGroup = new THREE.Group();
+      cameraGroup.add(camera);
+      scene.add(cameraGroup);
+
+      // Lighting
+      const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.3);
+      hemiLight.position.set(0, 50, 0);
+      scene.add(hemiLight);
+
+      const dirLight = new THREE.DirectionalLight(0xffeecc, 1.8);
+      dirLight.position.set(20, 40, 30);
+      dirLight.castShadow = true;
+      dirLight.shadow.mapSize.width = 4096;
+      dirLight.shadow.mapSize.height = 4096;
+      scene.add(dirLight);
+
+      // Ground
+      const groundTex = new THREE.TextureLoader().load('https://threejs.org/examples/textures/terrain/grasslight-big.jpg');
+      groundTex.wrapS = groundTex.wrapT = THREE.RepeatWrapping;
+      groundTex.repeat.set(200, 200);
+      const ground = new THREE.Mesh(
+        new THREE.PlaneGeometry(1000, 1000),
+        new THREE.MeshStandardMaterial({ map: groundTex, roughness: 0.9 })
+      );
+      ground.rotation.x = -Math.PI / 2;
+      ground.receiveShadow = true;
+      scene.add(ground);
+
+      // Trees
+      for (let i = 0; i < 70; i++) {
+        const trunk = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.5, 0.7, 6, 16),
+          new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.95 })
+        );
+        trunk.position.y = 3;
+        trunk.castShadow = true;
+        trunk.receiveShadow = true;
+
+        const foliage = new THREE.Group();
+        const colors = [0x1F7A1F, 0x228B22, 0x2E8B57, 0x196619];
+        for (let j = 0; j < 4; j++) {
+          const leaf = new THREE.Mesh(
+            new THREE.SphereGeometry(3 - j * 0.5, 16, 12),
+            new THREE.MeshStandardMaterial({ color: colors[j], roughness: 0.9 })
+          );
+          leaf.position.y = 5 + j * 2;
+          leaf.castShadow = true;
+          foliage.add(leaf);
+        }
+
+        const tree = new THREE.Group();
+        tree.add(trunk, foliage);
+        tree.position.x = (Math.random() - 0.5) * 400;
+        tree.position.z = (Math.random() - 0.5) * 400;
+        scene.add(tree);
+      }
+
+      // Add visible hyper-realistic clouds
+      const animateClouds = addRealisticClouds(scene);
+
+      return { renderer, scene, camera, cameraGroup, animateClouds };
+    }
+
+    let animateCloudsLeft, animateCloudsRight;
+
+    function setupThree() {
+      const left = createVirtualScene(threeLeft);
+      rendererLeft = left.renderer; sceneLeft = left.scene; cameraLeft = left.camera; cameraGroupLeft = left.cameraGroup; animateCloudsLeft = left.animateClouds;
+
+      const right = createVirtualScene(threeRight);
+      rendererRight = right.renderer; sceneRight = right.scene; cameraRight = right.camera; cameraGroupRight = right.cameraGroup; animateCloudsRight = right.animateClouds;
+
+      function animate() {
+        requestAnimationFrame(animate);
+        // Always animate clouds and render 3D world (even when hidden)
+        animateCloudsLeft();
+        animateCloudsRight();
+        rendererLeft.render(sceneLeft, cameraLeft);
+        rendererRight.render(sceneRight, cameraRight);
+      }
+      animate();
+    }
+
+    function toggleVirtualWorld() {
+      virtualMode = !virtualMode;
+
+      if (virtualMode) {
+        threeLeft.classList.add('active');
+        threeRight.classList.add('active');
+        videoLeft.style.opacity = '0';
+        videoRight.style.opacity = '0';
+        statusLeft.textContent = "Virtual World – Turn phone to look around";
+        statusRight.textContent = "Virtual World – Turn phone to look around";
+      } else {
+        threeLeft.classList.remove('active');
+        threeRight.classList.remove('active');
+        videoLeft.style.opacity = '1';
+        videoRight.style.opacity = '1';
+        statusLeft.textContent = "Real World – Double pinch to enter";
+        statusRight.textContent = "Real World – Double pinch to enter";
+      }
+    }
 
     const HAND_CONNECTIONS = [
       [0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],
@@ -60,77 +298,57 @@
       [0,17],[17,18],[18,19],[19,20]
     ];
 
-    function drawSkeleton(landmarks) {
-      ctx.shadowBlur = 20;
-      ctx.shadowColor = '#00FFAA';
-      ctx.strokeStyle = '#00FFAA';
-      ctx.lineWidth = 10;
-      ctx.lineCap = 'round';
+    function drawSkeleton(ctx, landmarks, width, height) {
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = '#aaaaaa';
+      ctx.strokeStyle = '#cccccc';
+      ctx.lineWidth = 8;
       for (const [i, j] of HAND_CONNECTIONS) {
         const a = landmarks[i];
         const b = landmarks[j];
         ctx.beginPath();
-        ctx.moveTo(a.x * canvas.width, a.y * canvas.height);
-        ctx.lineTo(b.x * canvas.width, b.y * canvas.height);
+        ctx.moveTo(a.x * width, a.y * height);
+        ctx.lineTo(b.x * width, b.y * height);
         ctx.stroke();
       }
 
-      ctx.shadowBlur = 15;
-      ctx.shadowColor = '#FF3366';
-      ctx.fillStyle = '#FF3366';
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#ffffff';
+      ctx.fillStyle = '#ffffff';
       for (const lm of landmarks) {
         ctx.beginPath();
-        ctx.arc(lm.x * canvas.width, lm.y * canvas.height, 16, 0, 2 * Math.PI);
+        ctx.arc(lm.x * width, lm.y * height, 10, 0, 2 * Math.PI);
         ctx.fill();
       }
       ctx.shadowBlur = 0;
     }
 
-    let menuOpen = false;
     let lastPinch = false;
-
-    function updateMenu(landmarks) {
-      const thumb = landmarks[4];   // Thumb tip
-      const index = landmarks[8];  // Index finger tip
-
-      // Center between the two pinch points
-      const centerX = (thumb.x + index.x) / 2;
-      const centerY = (thumb.y + index.y) / 2;
-
-      menu.style.left = `${centerX * 100}%`;
-      menu.style.top = `${centerY * 100}%`;
-
-      // 3D depth scaling
-      const wristZ = landmarks[0].z;
-      const depth = -wristZ;
-      let scale = 0.6 + depth * 6;
-      scale = Math.max(0.5, Math.min(2.5, scale));
-
-      // Force upright orientation – menu always spawns and stays readable
-      menu.style.transform = `translate(-50%, -50%) scale(${scale}) rotate(0deg)`;
-    }
+    let pinchCount = 0;
+    let pinchTimer = null;
 
     async function startCamera() {
-      const constraints = {
-        video: {
-          facingMode: "environment",
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
-        }
-      };
-
+      const constraints = { video: { facingMode: "environment" } };
       try {
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        video.srcObject = stream;
-        video.onloadedmetadata = () => {
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          video.play();
+        videoLeft.srcObject = stream;
+        videoRight.srcObject = stream;
+
+        videoLeft.onloadedmetadata = () => {
+          handCanvasLeft.width = videoLeft.videoWidth;
+          handCanvasLeft.height = videoLeft.videoHeight;
+          handCanvasRight.width = videoRight.videoWidth;
+          handCanvasRight.height = videoRight.videoHeight;
+
+          videoLeft.play();
+          videoRight.play();
+
+          setupThree();
           setupHandTracking();
         };
       } catch (err) {
-        status.textContent = "Camera access denied";
-        console.error(err);
+        statusLeft.textContent = "Camera error";
+        statusRight.textContent = "Camera error";
       }
     }
 
@@ -146,57 +364,53 @@
             delegate: "GPU"
           },
           runningMode: "VIDEO",
-          numHands: 1,
+          numHands: 2,
           minHandDetectionConfidence: 0.8,
-          minHandPresenceConfidence: 0.8,
           minTrackingConfidence: 0.8
         });
 
-        status.textContent = "Ready! Pinch thumb + index to open menu";
-
         function predict() {
-          if (video.readyState >= video.HAVE_ENOUGH_DATA) {
+          if (videoLeft.readyState >= videoLeft.HAVE_ENOUGH_DATA) {
             const timestamp = performance.now();
+            const results = handLandmarker.detectForVideo(videoLeft, timestamp);
 
-            const results = handLandmarker.detectForVideo(video, timestamp);
+            ctxLeft.clearRect(0, 0, handCanvasLeft.width, handCanvasLeft.height);
+            ctxRight.clearRect(0, 0, handCanvasRight.width, handCanvasRight.height);
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            let anyPinch = false;
 
             if (results.landmarks && results.landmarks.length > 0) {
-              const landmarks = results.landmarks[0];
-              drawSkeleton(landmarks);
+              results.landmarks.forEach(lm => {
+                drawSkeleton(ctxLeft, lm, handCanvasLeft.width, handCanvasLeft.height);
+                drawSkeleton(ctxRight, lm, handCanvasRight.width, handCanvasRight.height);
 
-              const thumb = landmarks[4];
-              const index = landmarks[8];
-              const dist = Math.hypot(thumb.x - index.x, thumb.y - index.y, thumb.z - index.z);
-              const pinching = dist < 0.06;
+                const thumb = lm[4];
+                const index = lm[8];
+                const dist = Math.hypot(thumb.x - index.x, thumb.y - index.y);
+                if (dist < 0.06) anyPinch = true;
+              });
 
-              if (pinching && !lastPinch) {
-                menuOpen = !menuOpen;
-                menu.classList.toggle('visible', menuOpen);
-                status.textContent = menuOpen ? "Menu open!" : "Menu closed";
+              if (anyPinch && !lastPinch) {
+                pinchCount++;
+                if (pinchCount === 1) {
+                  pinchTimer = setTimeout(() => { pinchCount = 0; }, 600);
+                } else if (pinchCount === 2) {
+                  toggleVirtualWorld();
+                  pinchCount = 0;
+                  if (pinchTimer) clearTimeout(pinchTimer);
+                }
               }
-              lastPinch = pinching;
-
-              if (menuOpen) {
-                updateMenu(landmarks);
-              }
-
-              status.textContent = pinching ? "Pinch detected!" : "Tracking hand";
+              lastPinch = anyPinch;
             } else {
-              menu.classList.remove('visible');
-              menuOpen = false;
               lastPinch = false;
-              status.textContent = "No hand detected – palm toward camera";
+              pinchCount = 0;
             }
           }
-
           requestAnimationFrame(predict);
         }
 
         predict();
       } catch (err) {
-        status.textContent = "Model failed to load";
         console.error(err);
       }
     }
@@ -205,4 +419,3 @@
   </script>
 </body>
 </html>
-
