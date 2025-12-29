@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Ultra-Realistic 3D Virtual World – Visible Clouds + Persistent Gyro</title>
+  <title>3D Air Drawing – Ultra Stable</title>
   <style>
     body { margin: 0; background: black; overflow: hidden; }
     #container { 
@@ -33,21 +33,7 @@
     }
     .three-canvas { z-index: 2; opacity: 0; transition: opacity 0.6s ease; }
     .three-canvas.active { opacity: 1; }
-    .hand-canvas { z-index: 3; }
-    .status {
-      position: absolute; 
-      top: 20px; 
-      left: 50%; 
-      transform: translateX(-50%);
-      color: white; 
-      background: rgba(50,50,50,0.7); 
-      padding: 10px 20px;
-      border-radius: 12px; 
-      font-size: 16px;
-      pointer-events: none;
-      font-family: -apple-system, sans-serif; 
-      z-index: 20;
-    }
+    .hand-canvas { z-index: 4; }
   </style>
   <script type="importmap">
   {
@@ -60,19 +46,15 @@
 </head>
 <body>
   <div id="container">
-    <!-- Left Eye -->
     <div class="eye">
       <video id="videoLeft" autoplay playsinline muted></video>
       <canvas id="threeLeft" class="three-canvas"></canvas>
       <canvas id="handLeft" class="hand-canvas"></canvas>
-      <div class="status" id="statusLeft">Tap screen to enable gyro – Double pinch to enter</div>
     </div>
-    <!-- Right Eye -->
     <div class="eye">
       <video id="videoRight" autoplay playsinline muted></video>
       <canvas id="threeRight" class="three-canvas"></canvas>
       <canvas id="handRight" class="hand-canvas"></canvas>
-      <div class="status" id="statusRight">Tap screen to enable gyro – Double pinch to enter</div>
     </div>
   </div>
 
@@ -89,14 +71,21 @@
     const ctxLeft = handCanvasLeft.getContext('2d');
     const ctxRight = handCanvasRight.getContext('2d');
 
-    const statusLeft = document.getElementById('statusLeft');
-    const statusRight = document.getElementById('statusRight');
-
     let virtualMode = false;
-    let rendererLeft, rendererRight, sceneLeft, sceneRight, cameraLeft, cameraRight;
+    let rendererLeft, rendererRight;
+    let scene, cameraLeft, cameraRight;
     let cameraGroupLeft, cameraGroupRight;
 
-    // === GYRO – NOW ALWAYS ACTIVE (even in real world background) ===
+    let drawMode = false;
+
+    // Switch to InstancedMesh – massive performance win for thousands of spheres
+    const maxSpheres = 3000; // Safe limit – prevents unbounded growth
+    const sphereGeo = new THREE.SphereGeometry(0.012, 8, 6);
+    const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+    const instancedMesh = new THREE.InstancedMesh(sphereGeo, sphereMaterial, maxSpheres);
+    instancedMesh.count = 0; // Currently visible instances
+    const dummy = new THREE.Object3D();
+
     let gyroActive = false;
 
     function enableGyro() {
@@ -106,16 +95,12 @@
             if (response === 'granted') {
               window.addEventListener('deviceorientation', handleOrientation);
               gyroActive = true;
-              statusLeft.textContent = "Gyro active – Double pinch to enter";
-              statusRight.textContent = "Gyro active – Double pinch to enter";
             }
           })
           .catch(console.error);
       } else {
         window.addEventListener('deviceorientation', handleOrientation);
         gyroActive = true;
-        statusLeft.textContent = "Gyro active – Double pinch to enter";
-        statusRight.textContent = "Gyro active – Double pinch to enter";
       }
     }
 
@@ -123,89 +108,28 @@
 
     function handleOrientation(event) {
       if (!gyroActive || event.alpha === null) return;
-
       const yaw = THREE.MathUtils.degToRad(event.alpha);
       const pitch = THREE.MathUtils.degToRad(Math.max(-80, Math.min(80, event.beta)));
       const roll = THREE.MathUtils.degToRad(event.gamma);
-
       const euler = new THREE.Euler(pitch, yaw, -roll, 'YXZ');
       const quat = new THREE.Quaternion().setFromEuler(euler);
-
-      // Always update camera orientation — even when virtual world is hidden
       cameraGroupLeft.quaternion.copy(quat);
       cameraGroupRight.quaternion.copy(quat);
     }
 
-    // === HYPER-REALISTIC VISIBLE CLOUDS ===
-    function addRealisticClouds(scene) {
-      const cloudTexture = new THREE.TextureLoader().load('https://threejs.org/examples/textures/sprites/cloud10.png');
-      const cloudMaterial = new THREE.SpriteMaterial({
-        map: cloudTexture,
-        transparent: true,
-        opacity: 0.85,
-        depthWrite: false,
-        blending: THREE.NormalBlending,
-        color: 0xffffff
-      });
-
-      const clouds = [];
-      for (let i = 0; i < 100; i++) {
-        const sprite = new THREE.Sprite(cloudMaterial.clone());
-        const scale = 15 + Math.random() * 35;
-        sprite.scale.set(scale, scale * 0.4, 1);
-        sprite.position.set(
-          (Math.random() - 0.5) * 800,
-          25 + Math.random() * 40,
-          (Math.random() - 0.5) * 800
-        );
-        // Slight tint variation for realism
-        sprite.material.color.setHSL(0, 0, 0.95 + Math.random() * 0.05);
-        scene.add(sprite);
-        clouds.push(sprite);
-      }
-
-      // Slow drifting animation
-      function animateClouds() {
-        clouds.forEach(c => {
-          c.position.x += 0.03 + Math.random() * 0.02;
-          if (c.position.x > 400) c.position.x = -400;
-        });
-      }
-
-      return animateClouds;
-    }
-
-    function createVirtualScene(canvas) {
-      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-      renderer.setPixelRatio(window.devicePixelRatio);
-      renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
+    function createSharedVirtualScene() {
       const scene = new THREE.Scene();
       scene.background = new THREE.Color(0x87CEEB);
-      scene.fog = new THREE.FogExp2(0x87CEEB, 0.0006);
+      scene.fog = new THREE.FogExp2(0x87CEEB, 0.0008);
 
-      const camera = new THREE.PerspectiveCamera(60, canvas.clientWidth / canvas.clientHeight, 0.1, 1500);
-      camera.position.set(0, 1.6, 0);
-
-      const cameraGroup = new THREE.Group();
-      cameraGroup.add(camera);
-      scene.add(cameraGroup);
-
-      // Lighting
-      const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.3);
+      const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
       hemiLight.position.set(0, 50, 0);
       scene.add(hemiLight);
 
-      const dirLight = new THREE.DirectionalLight(0xffeecc, 1.8);
+      const dirLight = new THREE.DirectionalLight(0xffeecc, 1.4);
       dirLight.position.set(20, 40, 30);
-      dirLight.castShadow = true;
-      dirLight.shadow.mapSize.width = 4096;
-      dirLight.shadow.mapSize.height = 4096;
       scene.add(dirLight);
 
-      // Ground
       const groundTex = new THREE.TextureLoader().load('https://threejs.org/examples/textures/terrain/grasslight-big.jpg');
       groundTex.wrapS = groundTex.wrapT = THREE.RepeatWrapping;
       groundTex.repeat.set(200, 200);
@@ -214,28 +138,22 @@
         new THREE.MeshStandardMaterial({ map: groundTex, roughness: 0.9 })
       );
       ground.rotation.x = -Math.PI / 2;
-      ground.receiveShadow = true;
       scene.add(ground);
 
-      // Trees
-      for (let i = 0; i < 70; i++) {
+      for (let i = 0; i < 30; i++) {
         const trunk = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.5, 0.7, 6, 16),
-          new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.95 })
+          new THREE.CylinderGeometry(0.5, 0.7, 6, 8),
+          new THREE.MeshBasicMaterial({ color: 0x8B4513 })
         );
         trunk.position.y = 3;
-        trunk.castShadow = true;
-        trunk.receiveShadow = true;
 
         const foliage = new THREE.Group();
-        const colors = [0x1F7A1F, 0x228B22, 0x2E8B57, 0x196619];
-        for (let j = 0; j < 4; j++) {
+        for (let j = 0; j < 2; j++) {
           const leaf = new THREE.Mesh(
-            new THREE.SphereGeometry(3 - j * 0.5, 16, 12),
-            new THREE.MeshStandardMaterial({ color: colors[j], roughness: 0.9 })
+            new THREE.SphereGeometry(2.5 - j * 0.8, 8, 6),
+            new THREE.MeshBasicMaterial({ color: 0x228B22 })
           );
           leaf.position.y = 5 + j * 2;
-          leaf.castShadow = true;
           foliage.add(leaf);
         }
 
@@ -246,99 +164,103 @@
         scene.add(tree);
       }
 
-      // Add visible hyper-realistic clouds
-      const animateClouds = addRealisticClouds(scene);
+      const cloudTexture = new THREE.TextureLoader().load('https://threejs.org/examples/textures/sprites/cloud10.png');
+      const cloudMaterial = new THREE.SpriteMaterial({ map: cloudTexture, transparent: true, opacity: 0.7, depthWrite: false });
+      for (let i = 0; i < 30; i++) {
+        const sprite = new THREE.Sprite(cloudMaterial.clone());
+        sprite.scale.set(40, 14, 1);
+        sprite.position.set((Math.random() - 0.5) * 1000, 40 + Math.random() * 30, (Math.random() - 0.5) * 1000);
+        scene.add(sprite);
+      }
 
-      return { renderer, scene, camera, cameraGroup, animateClouds };
+      scene.add(instancedMesh);
+      return { scene };
     }
 
-    let animateCloudsLeft, animateCloudsRight;
-
     function setupThree() {
-      const left = createVirtualScene(threeLeft);
-      rendererLeft = left.renderer; sceneLeft = left.scene; cameraLeft = left.camera; cameraGroupLeft = left.cameraGroup; animateCloudsLeft = left.animateClouds;
+      const { scene } = createSharedVirtualScene();
 
-      const right = createVirtualScene(threeRight);
-      rendererRight = right.renderer; sceneRight = right.scene; cameraRight = right.camera; cameraGroupRight = right.cameraGroup; animateCloudsRight = right.animateClouds;
+      rendererLeft = new THREE.WebGLRenderer({ canvas: threeLeft, antialias: false, alpha: true, powerPreference: "high-performance" });
+      rendererRight = new THREE.WebGLRenderer({ canvas: threeRight, antialias: false, alpha: true, powerPreference: "high-performance" });
+
+      rendererLeft.setPixelRatio(Math.min(window.devicePixelRatio, 1.2));
+      rendererRight.setPixelRatio(Math.min(window.devicePixelRatio, 1.2));
+
+      rendererLeft.setSize(threeLeft.clientWidth, threeLeft.clientHeight);
+      rendererRight.setSize(threeRight.clientWidth, threeRight.clientHeight);
+
+      cameraLeft = new THREE.PerspectiveCamera(60, threeLeft.clientWidth / threeLeft.clientHeight, 0.1, 1000);
+      cameraRight = new THREE.PerspectiveCamera(60, threeRight.clientWidth / threeRight.clientHeight, 0.1, 1000);
+      cameraLeft.position.set(-0.03, 1.6, 0);
+      cameraRight.position.set(0.03, 1.6, 0);
+
+      cameraGroupLeft = new THREE.Group(); cameraGroupLeft.add(cameraLeft); scene.add(cameraGroupLeft);
+      cameraGroupRight = new THREE.Group(); cameraGroupRight.add(cameraRight); scene.add(cameraGroupRight);
 
       function animate() {
         requestAnimationFrame(animate);
-        // Always animate clouds and render 3D world (even when hidden)
-        animateCloudsLeft();
-        animateCloudsRight();
-        rendererLeft.render(sceneLeft, cameraLeft);
-        rendererRight.render(sceneRight, cameraRight);
+        rendererLeft.render(scene, cameraLeft);
+        rendererRight.render(scene, cameraRight);
       }
       animate();
     }
 
     function toggleVirtualWorld() {
       virtualMode = !virtualMode;
-
       if (virtualMode) {
         threeLeft.classList.add('active');
         threeRight.classList.add('active');
         videoLeft.style.opacity = '0';
         videoRight.style.opacity = '0';
-        statusLeft.textContent = "Virtual World – Turn phone to look around";
-        statusRight.textContent = "Virtual World – Turn phone to look around";
       } else {
         threeLeft.classList.remove('active');
         threeRight.classList.remove('active');
         videoLeft.style.opacity = '1';
         videoRight.style.opacity = '1';
-        statusLeft.textContent = "Real World – Double pinch to enter";
-        statusRight.textContent = "Real World – Double pinch to enter";
+        drawMode = false;
+        instancedMesh.count = 0; // Clear drawings on exit
       }
     }
 
-    const HAND_CONNECTIONS = [
-      [0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],
-      [0,9],[9,10],[10,11],[11,12],[0,13],[13,14],[14,15],[15,16],
-      [0,17],[17,18],[18,19],[19,20]
-    ];
+    const HAND_CONNECTIONS = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[0,9],[9,10],[10,11],[11,12],[0,13],[13,14],[14,15],[15,16],[0,17],[17,18],[18,19],[19,20]];
 
     function drawSkeleton(ctx, landmarks, width, height) {
-      ctx.shadowBlur = 15;
-      ctx.shadowColor = '#aaaaaa';
-      ctx.strokeStyle = '#cccccc';
-      ctx.lineWidth = 8;
+      ctx.clearRect(0, 0, width, height);
+      ctx.strokeStyle = '#aaaaaa'; ctx.lineWidth = 5;
       for (const [i, j] of HAND_CONNECTIONS) {
-        const a = landmarks[i];
-        const b = landmarks[j];
-        ctx.beginPath();
-        ctx.moveTo(a.x * width, a.y * height);
-        ctx.lineTo(b.x * width, b.y * height);
-        ctx.stroke();
+        const a = landmarks[i]; const b = landmarks[j];
+        ctx.beginPath(); ctx.moveTo(a.x * width, a.y * height); ctx.lineTo(b.x * width, b.y * height); ctx.stroke();
       }
-
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = '#ffffff';
       ctx.fillStyle = '#ffffff';
       for (const lm of landmarks) {
-        ctx.beginPath();
-        ctx.arc(lm.x * width, lm.y * height, 10, 0, 2 * Math.PI);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(lm.x * width, lm.y * height, 6, 0, 2 * Math.PI); ctx.fill();
       }
-      ctx.shadowBlur = 0;
     }
 
     let lastPinch = false;
     let pinchCount = 0;
     let pinchTimer = null;
+    let thumbsUpDetected = false;
+    let thumbsDownDetected = false;
+
+    let lastDrawTime = 0;
+    const drawInterval = 100; // ~10 spheres/sec max
+    let lastDrawPos = null;
+    const minDistance = 0.02;
 
     async function startCamera() {
-      const constraints = { video: { facingMode: "environment" } };
+      const constraints = { video: { facingMode: "environment", width: { ideal: 640 }, height: { ideal: 360 } } }; // Even lower res
+
       try {
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         videoLeft.srcObject = stream;
-        videoRight.srcObject = stream;
+        videoRight.srcObject = stream.clone();
 
         videoLeft.onloadedmetadata = () => {
           handCanvasLeft.width = videoLeft.videoWidth;
           handCanvasLeft.height = videoLeft.videoHeight;
-          handCanvasRight.width = videoRight.videoWidth;
-          handCanvasRight.height = videoRight.videoHeight;
+          handCanvasRight.width = videoLeft.videoWidth;
+          handCanvasRight.height = videoLeft.videoHeight;
 
           videoLeft.play();
           videoRight.play();
@@ -347,26 +269,22 @@
           setupHandTracking();
         };
       } catch (err) {
-        statusLeft.textContent = "Camera error";
-        statusRight.textContent = "Camera error";
+        console.error("Camera error:", err);
       }
     }
 
     async function setupHandTracking() {
       try {
-        const vision = await FilesetResolver.forVisionTasks(
-          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
-        );
-
+        const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm");
         const handLandmarker = await HandLandmarker.createFromOptions(vision, {
           baseOptions: {
             modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
             delegate: "GPU"
           },
           runningMode: "VIDEO",
-          numHands: 2,
-          minHandDetectionConfidence: 0.8,
-          minTrackingConfidence: 0.8
+          numHands: 1,
+          minHandDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.5
         });
 
         function predict() {
@@ -374,45 +292,79 @@
             const timestamp = performance.now();
             const results = handLandmarker.detectForVideo(videoLeft, timestamp);
 
-            ctxLeft.clearRect(0, 0, handCanvasLeft.width, handCanvasLeft.height);
-            ctxRight.clearRect(0, 0, handCanvasRight.width, handCanvasRight.height);
-
             let anyPinch = false;
+            let pointerHand = null;
+            let currentThumbsUp = false;
+            let currentThumbsDown = false;
 
-            if (results.landmarks && results.landmarks.length > 0) {
-              results.landmarks.forEach(lm => {
-                drawSkeleton(ctxLeft, lm, handCanvasLeft.width, handCanvasLeft.height);
-                drawSkeleton(ctxRight, lm, handCanvasRight.width, handCanvasRight.height);
+            if (results.landmarks?.length > 0) {
+              const lm = results.landmarks[0];
+              drawSkeleton(ctxLeft, lm, handCanvasLeft.width, handCanvasLeft.height);
+              drawSkeleton(ctxRight, lm, handCanvasRight.width, handCanvasRight.height);
 
-                const thumb = lm[4];
-                const index = lm[8];
-                const dist = Math.hypot(thumb.x - index.x, thumb.y - index.y);
-                if (dist < 0.06) anyPinch = true;
-              });
+              const thumb = lm[4]; const index = lm[8];
+              const dist = Math.hypot(thumb.x - index.x, thumb.y - index.y, thumb.z - index.z);
+              if (dist < 0.06) anyPinch = true;
 
-              if (anyPinch && !lastPinch) {
-                pinchCount++;
-                if (pinchCount === 1) {
-                  pinchTimer = setTimeout(() => { pinchCount = 0; }, 600);
-                } else if (pinchCount === 2) {
-                  toggleVirtualWorld();
-                  pinchCount = 0;
-                  if (pinchTimer) clearTimeout(pinchTimer);
-                }
+              const indexY = lm[8].y;
+              const othersY = [lm[4].y, lm[12].y, lm[16].y, lm[20].y];
+              if (indexY < Math.min(...othersY) - 0.12) pointerHand = lm;
+
+              const thumbTipY = lm[4].y;
+              const otherTipsY = [lm[8].y, lm[12].y, lm[16].y, lm[20].y];
+              if (thumbTipY < Math.min(...otherTipsY) - 0.1) currentThumbsUp = true;
+              if (thumbTipY > Math.max(...otherTipsY) + 0.1) currentThumbsDown = true;
+            }
+
+            if (anyPinch && !lastPinch) {
+              pinchCount++;
+              if (pinchCount === 1) {
+                pinchTimer = setTimeout(() => { pinchCount = 0; }, 700);
+              } else if (pinchCount === 2) {
+                toggleVirtualWorld();
+                pinchCount = 0;
+                if (pinchTimer) clearTimeout(pinchTimer);
               }
-              lastPinch = anyPinch;
-            } else {
-              lastPinch = false;
-              pinchCount = 0;
+            }
+            lastPinch = anyPinch;
+
+            if (currentThumbsUp && !thumbsUpDetected) drawMode = true;
+            thumbsUpDetected = currentThumbsUp;
+
+            if (currentThumbsDown && !thumbsDownDetected) drawMode = false;
+            thumbsDownDetected = currentThumbsDown;
+
+            // ULTRA OPTIMIZED DRAWING WITH INSTANCEDMESH
+            if (drawMode && pointerHand && virtualMode && timestamp - lastDrawTime > drawInterval) {
+              const tip = pointerHand[8];
+              const depthEstimate = 0.5 - tip.z * 1.3;
+              const ndcX = tip.x * 2 - 1;
+              const ndcY = 1 - tip.y * 2;
+
+              const vector = new THREE.Vector3(ndcX, ndcY, -1).unproject(cameraLeft);
+              const dir = vector.sub(cameraLeft.position).normalize();
+              const pos = cameraLeft.position.clone().add(dir.multiplyScalar(depthEstimate));
+
+              if (!lastDrawPos || lastDrawPos.distanceTo(pos) > minDistance) {
+                if (instancedMesh.count < maxSpheres) {
+                  dummy.position.copy(pos);
+                  dummy.updateMatrix();
+                  instancedMesh.setMatrixAt(instancedMesh.count, dummy.matrix);
+                  instancedMesh.count++;
+                  instancedMesh.instanceMatrix.needsUpdate = true;
+                }
+                lastDrawPos = pos.clone();
+                lastDrawTime = timestamp;
+              }
+            } else if (!drawMode) {
+              lastDrawPos = null;
             }
           }
           requestAnimationFrame(predict);
         }
 
         predict();
-      } catch (err) {
-        console.error(err);
-      }
+      } catch (err) { console.error(err); }
     }
 
     startCamera();
