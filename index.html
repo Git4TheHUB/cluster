@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>3D Air Drawing – Ultra Stable</title>
+  <meta name="screen-orientation" content="landscape">
+  <title>3D Virtual World with Stylized 2D Hand Overlay (Landscape Gyro)</title>
   <style>
     body { margin: 0; background: black; overflow: hidden; }
     #container { 
@@ -34,6 +35,25 @@
     .three-canvas { z-index: 2; opacity: 0; transition: opacity 0.6s ease; }
     .three-canvas.active { opacity: 1; }
     .hand-canvas { z-index: 4; }
+
+    /* Encourage landscape mode */
+    @media (orientation: portrait) {
+      body::before {
+        content: "Please rotate your device to landscape for the best experience";
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.9);
+        color: white;
+        font-size: 24px;
+        font-family: system-ui, sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 20px;
+        z-index: 9999;
+      }
+    }
   </style>
   <script type="importmap">
   {
@@ -76,16 +96,6 @@
     let scene, cameraLeft, cameraRight;
     let cameraGroupLeft, cameraGroupRight;
 
-    let drawMode = false;
-
-    // Switch to InstancedMesh – massive performance win for thousands of spheres
-    const maxSpheres = 3000; // Safe limit – prevents unbounded growth
-    const sphereGeo = new THREE.SphereGeometry(0.012, 8, 6);
-    const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffff });
-    const instancedMesh = new THREE.InstancedMesh(sphereGeo, sphereMaterial, maxSpheres);
-    instancedMesh.count = 0; // Currently visible instances
-    const dummy = new THREE.Object3D();
-
     let gyroActive = false;
 
     function enableGyro() {
@@ -104,15 +114,29 @@
       }
     }
 
+    // Activate gyro on first touch
     document.body.addEventListener('touchend', enableGyro, { once: true });
 
+    // NEW: Landscape-optimized gyroscope handling
     function handleOrientation(event) {
       if (!gyroActive || event.alpha === null) return;
-      const yaw = THREE.MathUtils.degToRad(event.alpha);
-      const pitch = THREE.MathUtils.degToRad(Math.max(-80, Math.min(80, event.beta)));
-      const roll = THREE.MathUtils.degToRad(event.gamma);
-      const euler = new THREE.Euler(pitch, yaw, -roll, 'YXZ');
+
+      let yaw   = THREE.MathUtils.degToRad(event.alpha || 0);
+      let pitch = THREE.MathUtils.degToRad(event.beta  || 0);
+      let roll  = THREE.MathUtils.degToRad(event.gamma || 0);
+
+      // Remap axes for landscape orientation (phone held sideways)
+      // Left/right tilt (gamma) → look up/down (pitch)
+      // Forward/back tilt (beta) → horizon roll
+      const landscapePitch = -roll;
+      const landscapeRoll  = pitch;
+
+      // Clamp pitch to prevent gimbal lock
+      const clampedPitch = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, landscapePitch));
+
+      const euler = new THREE.Euler(clampedPitch, yaw, landscapeRoll, 'YXZ');
       const quat = new THREE.Quaternion().setFromEuler(euler);
+
       cameraGroupLeft.quaternion.copy(quat);
       cameraGroupRight.quaternion.copy(quat);
     }
@@ -173,12 +197,12 @@
         scene.add(sprite);
       }
 
-      scene.add(instancedMesh);
       return { scene };
     }
 
     function setupThree() {
-      const { scene } = createSharedVirtualScene();
+      const { scene: sharedScene } = createSharedVirtualScene();
+      scene = sharedScene;
 
       rendererLeft = new THREE.WebGLRenderer({ canvas: threeLeft, antialias: false, alpha: true, powerPreference: "high-performance" });
       rendererRight = new THREE.WebGLRenderer({ canvas: threeRight, antialias: false, alpha: true, powerPreference: "high-performance" });
@@ -191,7 +215,7 @@
 
       cameraLeft = new THREE.PerspectiveCamera(60, threeLeft.clientWidth / threeLeft.clientHeight, 0.1, 1000);
       cameraRight = new THREE.PerspectiveCamera(60, threeRight.clientWidth / threeRight.clientHeight, 0.1, 1000);
-      cameraLeft.position.set(-0.03, 1.6, 0);
+      cameraLeft.position.set(-0.03, 1.6, 0);  // Slight stereo offset
       cameraRight.position.set(0.03, 1.6, 0);
 
       cameraGroupLeft = new THREE.Group(); cameraGroupLeft.add(cameraLeft); scene.add(cameraGroupLeft);
@@ -217,39 +241,58 @@
         threeRight.classList.remove('active');
         videoLeft.style.opacity = '1';
         videoRight.style.opacity = '1';
-        drawMode = false;
-        instancedMesh.count = 0; // Clear drawings on exit
       }
     }
 
+    // Hand connections (MediaPipe standard)
     const HAND_CONNECTIONS = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[0,9],[9,10],[10,11],[11,12],[0,13],[13,14],[14,15],[15,16],[0,17],[17,18],[18,19],[19,20]];
+    const PALM_OUTLINE = [[0,5],[5,9],[9,13],[13,17],[17,0]];
 
-    function drawSkeleton(ctx, landmarks, width, height) {
+    function drawHandOverlay(ctx, landmarks, width, height) {
       ctx.clearRect(0, 0, width, height);
-      ctx.strokeStyle = '#aaaaaa'; ctx.lineWidth = 5;
+      if (!landmarks) return;
+
+      const points = landmarks.map(lm => ({ x: lm.x * width, y: lm.y * height }));
+
+      // Semi-transparent grey fill for palm
+      ctx.fillStyle = 'rgba(100, 100, 100, 0.4)';
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (const [i, j] of PALM_OUTLINE) {
+        ctx.lineTo(points[j].x, points[j].y);
+      }
+      ctx.closePath();
+      ctx.fill();
+
+      // Thick white skeleton outline
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 8;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
       for (const [i, j] of HAND_CONNECTIONS) {
-        const a = landmarks[i]; const b = landmarks[j];
-        ctx.beginPath(); ctx.moveTo(a.x * width, a.y * height); ctx.lineTo(b.x * width, b.y * height); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(points[i].x, points[i].y);
+        ctx.lineTo(points[j].x, points[j].y);
+        ctx.stroke();
       }
-      ctx.fillStyle = '#ffffff';
-      for (const lm of landmarks) {
-        ctx.beginPath(); ctx.arc(lm.x * width, lm.y * height, 6, 0, 2 * Math.PI); ctx.fill();
+
+      // Extra palm outline
+      ctx.beginPath();
+      for (let k = 0; k < PALM_OUTLINE.length; k++) {
+        const [i, j] = PALM_OUTLINE[k];
+        if (k === 0) ctx.moveTo(points[i].x, points[i].y);
+        ctx.lineTo(points[j].x, points[j].y);
       }
+      ctx.stroke();
     }
 
     let lastPinch = false;
     let pinchCount = 0;
     let pinchTimer = null;
-    let thumbsUpDetected = false;
-    let thumbsDownDetected = false;
-
-    let lastDrawTime = 0;
-    const drawInterval = 100; // ~10 spheres/sec max
-    let lastDrawPos = null;
-    const minDistance = 0.02;
 
     async function startCamera() {
-      const constraints = { video: { facingMode: "environment", width: { ideal: 640 }, height: { ideal: 360 } } }; // Even lower res
+      const constraints = { video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } };
 
       try {
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -293,29 +336,22 @@
             const results = handLandmarker.detectForVideo(videoLeft, timestamp);
 
             let anyPinch = false;
-            let pointerHand = null;
-            let currentThumbsUp = false;
-            let currentThumbsDown = false;
+            let currentLandmarks = null;
 
             if (results.landmarks?.length > 0) {
               const lm = results.landmarks[0];
-              drawSkeleton(ctxLeft, lm, handCanvasLeft.width, handCanvasLeft.height);
-              drawSkeleton(ctxRight, lm, handCanvasRight.width, handCanvasRight.height);
+              currentLandmarks = lm;
 
-              const thumb = lm[4]; const index = lm[8];
+              const thumb = lm[4];
+              const index = lm[8];
               const dist = Math.hypot(thumb.x - index.x, thumb.y - index.y, thumb.z - index.z);
               if (dist < 0.06) anyPinch = true;
-
-              const indexY = lm[8].y;
-              const othersY = [lm[4].y, lm[12].y, lm[16].y, lm[20].y];
-              if (indexY < Math.min(...othersY) - 0.12) pointerHand = lm;
-
-              const thumbTipY = lm[4].y;
-              const otherTipsY = [lm[8].y, lm[12].y, lm[16].y, lm[20].y];
-              if (thumbTipY < Math.min(...otherTipsY) - 0.1) currentThumbsUp = true;
-              if (thumbTipY > Math.max(...otherTipsY) + 0.1) currentThumbsDown = true;
             }
 
+            drawHandOverlay(ctxLeft, currentLandmarks, handCanvasLeft.width, handCanvasLeft.height);
+            drawHandOverlay(ctxRight, currentLandmarks, handCanvasLeft.width, handCanvasLeft.height);
+
+            // Double pinch to toggle virtual world
             if (anyPinch && !lastPinch) {
               pinchCount++;
               if (pinchCount === 1) {
@@ -327,38 +363,6 @@
               }
             }
             lastPinch = anyPinch;
-
-            if (currentThumbsUp && !thumbsUpDetected) drawMode = true;
-            thumbsUpDetected = currentThumbsUp;
-
-            if (currentThumbsDown && !thumbsDownDetected) drawMode = false;
-            thumbsDownDetected = currentThumbsDown;
-
-            // ULTRA OPTIMIZED DRAWING WITH INSTANCEDMESH
-            if (drawMode && pointerHand && virtualMode && timestamp - lastDrawTime > drawInterval) {
-              const tip = pointerHand[8];
-              const depthEstimate = 0.5 - tip.z * 1.3;
-              const ndcX = tip.x * 2 - 1;
-              const ndcY = 1 - tip.y * 2;
-
-              const vector = new THREE.Vector3(ndcX, ndcY, -1).unproject(cameraLeft);
-              const dir = vector.sub(cameraLeft.position).normalize();
-              const pos = cameraLeft.position.clone().add(dir.multiplyScalar(depthEstimate));
-
-              if (!lastDrawPos || lastDrawPos.distanceTo(pos) > minDistance) {
-                if (instancedMesh.count < maxSpheres) {
-                  dummy.position.copy(pos);
-                  dummy.updateMatrix();
-                  instancedMesh.setMatrixAt(instancedMesh.count, dummy.matrix);
-                  instancedMesh.count++;
-                  instancedMesh.instanceMatrix.needsUpdate = true;
-                }
-                lastDrawPos = pos.clone();
-                lastDrawTime = timestamp;
-              }
-            } else if (!drawMode) {
-              lastDrawPos = null;
-            }
           }
           requestAnimationFrame(predict);
         }
