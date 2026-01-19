@@ -6,36 +6,40 @@
   <meta name="screen-orientation" content="landscape">
   <title>3D Virtual World with Stylized 2D Hand Overlay (Landscape Gyro)</title>
   <style>
-    body { margin: 0; background: black; overflow: hidden; }
-    #container { 
-      position: relative; 
-      width: 100vw; 
-      height: 100vh; 
-      display: flex; 
-    }
-    .eye { 
-      width: 50vw; 
-      height: 100vh; 
+    body { 
+      margin: 0; 
+      background: black; 
       overflow: hidden; 
-      position: relative; 
     }
-    video { 
-      position: absolute; 
+    #container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+    video {
+      position: absolute;
       top: 0; left: 0;
-      width: 100%; height: 100%; 
-      object-fit: cover; 
+      width: 100%; height: 100%;
+      object-fit: cover;
       z-index: 1;
       transition: opacity 0.6s ease;
     }
-    canvas { 
-      position: absolute; 
+    canvas {
+      position: absolute;
       top: 0; left: 0;
-      width: 100%; height: 100%; 
+      width: 100%; height: 100%;
     }
-    .three-canvas { z-index: 2; opacity: 0; transition: opacity 0.6s ease; }
-    .three-canvas.active { opacity: 1; }
-    .hand-canvas { z-index: 4; }
-
+    .three-canvas { 
+      z-index: 2; 
+      opacity: 0; 
+      transition: opacity 0.6s ease; 
+    }
+    .three-canvas.active { 
+      opacity: 1; 
+    }
+    .hand-canvas { 
+      z-index: 4; 
+    }
     /* Encourage landscape mode */
     @media (orientation: portrait) {
       body::before {
@@ -66,36 +70,24 @@
 </head>
 <body>
   <div id="container">
-    <div class="eye">
-      <video id="videoLeft" autoplay playsinline muted></video>
-      <canvas id="threeLeft" class="three-canvas"></canvas>
-      <canvas id="handLeft" class="hand-canvas"></canvas>
-    </div>
-    <div class="eye">
-      <video id="videoRight" autoplay playsinline muted></video>
-      <canvas id="threeRight" class="three-canvas"></canvas>
-      <canvas id="handRight" class="hand-canvas"></canvas>
-    </div>
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="threeCanvas" class="three-canvas"></canvas>
+    <canvas id="handCanvas" class="hand-canvas"></canvas>
   </div>
 
   <script type="module">
     import * as THREE from 'three';
     import { HandLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.js";
 
-    const videoLeft = document.getElementById('videoLeft');
-    const videoRight = document.getElementById('videoRight');
-    const threeLeft = document.getElementById('threeLeft');
-    const threeRight = document.getElementById('threeRight');
-    const handCanvasLeft = document.getElementById('handLeft');
-    const handCanvasRight = document.getElementById('handRight');
-    const ctxLeft = handCanvasLeft.getContext('2d');
-    const ctxRight = handCanvasRight.getContext('2d');
+    const video = document.getElementById('video');
+    const threeCanvas = document.getElementById('threeCanvas');
+    const handCanvas = document.getElementById('handCanvas');
+    const ctx = handCanvas.getContext('2d');
 
     let virtualMode = false;
-    let rendererLeft, rendererRight;
-    let scene, cameraLeft, cameraRight;
-    let cameraGroupLeft, cameraGroupRight;
-
+    let renderer;
+    let scene, camera;
+    let cameraGroup;
     let gyroActive = false;
 
     function enableGyro() {
@@ -117,7 +109,6 @@
     // Activate gyro on first touch
     document.body.addEventListener('touchend', enableGyro, { once: true });
 
-    // NEW: Landscape-optimized gyroscope handling
     function handleOrientation(event) {
       if (!gyroActive || event.alpha === null) return;
 
@@ -125,20 +116,15 @@
       let pitch = THREE.MathUtils.degToRad(event.beta  || 0);
       let roll  = THREE.MathUtils.degToRad(event.gamma || 0);
 
-      // Remap axes for landscape orientation (phone held sideways)
-      // Left/right tilt (gamma) → look up/down (pitch)
-      // Forward/back tilt (beta) → horizon roll
+      // Landscape remapping
       const landscapePitch = -roll;
       const landscapeRoll  = pitch;
 
-      // Clamp pitch to prevent gimbal lock
-      const clampedPitch = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, landscapePitch));
-
+      const clampedPitch = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, landscapePitch));
       const euler = new THREE.Euler(clampedPitch, yaw, landscapeRoll, 'YXZ');
       const quat = new THREE.Quaternion().setFromEuler(euler);
 
-      cameraGroupLeft.quaternion.copy(quat);
-      cameraGroupRight.quaternion.copy(quat);
+      cameraGroup.quaternion.copy(quat);
     }
 
     function createSharedVirtualScene() {
@@ -157,6 +143,7 @@
       const groundTex = new THREE.TextureLoader().load('https://threejs.org/examples/textures/terrain/grasslight-big.jpg');
       groundTex.wrapS = groundTex.wrapT = THREE.RepeatWrapping;
       groundTex.repeat.set(200, 200);
+
       const ground = new THREE.Mesh(
         new THREE.PlaneGeometry(1000, 1000),
         new THREE.MeshStandardMaterial({ map: groundTex, roughness: 0.9 })
@@ -164,6 +151,7 @@
       ground.rotation.x = -Math.PI / 2;
       scene.add(ground);
 
+      // Trees...
       for (let i = 0; i < 30; i++) {
         const trunk = new THREE.Mesh(
           new THREE.CylinderGeometry(0.5, 0.7, 6, 8),
@@ -188,12 +176,23 @@
         scene.add(tree);
       }
 
+      // Clouds...
       const cloudTexture = new THREE.TextureLoader().load('https://threejs.org/examples/textures/sprites/cloud10.png');
-      const cloudMaterial = new THREE.SpriteMaterial({ map: cloudTexture, transparent: true, opacity: 0.7, depthWrite: false });
+      const cloudMaterial = new THREE.SpriteMaterial({ 
+        map: cloudTexture, 
+        transparent: true, 
+        opacity: 0.7, 
+        depthWrite: false 
+      });
+
       for (let i = 0; i < 30; i++) {
         const sprite = new THREE.Sprite(cloudMaterial.clone());
         sprite.scale.set(40, 14, 1);
-        sprite.position.set((Math.random() - 0.5) * 1000, 40 + Math.random() * 30, (Math.random() - 0.5) * 1000);
+        sprite.position.set(
+          (Math.random() - 0.5) * 1000, 
+          40 + Math.random() * 30, 
+          (Math.random() - 0.5) * 1000
+        );
         scene.add(sprite);
       }
 
@@ -204,27 +203,31 @@
       const { scene: sharedScene } = createSharedVirtualScene();
       scene = sharedScene;
 
-      rendererLeft = new THREE.WebGLRenderer({ canvas: threeLeft, antialias: false, alpha: true, powerPreference: "high-performance" });
-      rendererRight = new THREE.WebGLRenderer({ canvas: threeRight, antialias: false, alpha: true, powerPreference: "high-performance" });
+      renderer = new THREE.WebGLRenderer({ 
+        canvas: threeCanvas, 
+        antialias: false, 
+        alpha: true, 
+        powerPreference: "high-performance" 
+      });
 
-      rendererLeft.setPixelRatio(Math.min(window.devicePixelRatio, 1.2));
-      rendererRight.setPixelRatio(Math.min(window.devicePixelRatio, 1.2));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.2));
+      renderer.setSize(threeCanvas.clientWidth, threeCanvas.clientHeight);
 
-      rendererLeft.setSize(threeLeft.clientWidth, threeLeft.clientHeight);
-      rendererRight.setSize(threeRight.clientWidth, threeRight.clientHeight);
+      camera = new THREE.PerspectiveCamera(
+        60, 
+        threeCanvas.clientWidth / threeCanvas.clientHeight, 
+        0.1, 
+        1000
+      );
 
-      cameraLeft = new THREE.PerspectiveCamera(60, threeLeft.clientWidth / threeLeft.clientHeight, 0.1, 1000);
-      cameraRight = new THREE.PerspectiveCamera(60, threeRight.clientWidth / threeRight.clientHeight, 0.1, 1000);
-      cameraLeft.position.set(-0.03, 1.6, 0);  // Slight stereo offset
-      cameraRight.position.set(0.03, 1.6, 0);
-
-      cameraGroupLeft = new THREE.Group(); cameraGroupLeft.add(cameraLeft); scene.add(cameraGroupLeft);
-      cameraGroupRight = new THREE.Group(); cameraGroupRight.add(cameraRight); scene.add(cameraGroupRight);
+      camera.position.set(0, 1.6, 0);
+      cameraGroup = new THREE.Group();
+      cameraGroup.add(camera);
+      scene.add(cameraGroup);
 
       function animate() {
         requestAnimationFrame(animate);
-        rendererLeft.render(scene, cameraLeft);
-        rendererRight.render(scene, cameraRight);
+        renderer.render(scene, camera);
       }
       animate();
     }
@@ -232,19 +235,15 @@
     function toggleVirtualWorld() {
       virtualMode = !virtualMode;
       if (virtualMode) {
-        threeLeft.classList.add('active');
-        threeRight.classList.add('active');
-        videoLeft.style.opacity = '0';
-        videoRight.style.opacity = '0';
+        threeCanvas.classList.add('active');
+        video.style.opacity = '0';
       } else {
-        threeLeft.classList.remove('active');
-        threeRight.classList.remove('active');
-        videoLeft.style.opacity = '1';
-        videoRight.style.opacity = '1';
+        threeCanvas.classList.remove('active');
+        video.style.opacity = '1';
       }
     }
 
-    // Hand connections (MediaPipe standard)
+    // Hand drawing helpers
     const HAND_CONNECTIONS = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[0,9],[9,10],[10,11],[11,12],[0,13],[13,14],[14,15],[15,16],[0,17],[17,18],[18,19],[19,20]];
     const PALM_OUTLINE = [[0,5],[5,9],[9,13],[13,17],[17,0]];
 
@@ -254,7 +253,7 @@
 
       const points = landmarks.map(lm => ({ x: lm.x * width, y: lm.y * height }));
 
-      // Semi-transparent grey fill for palm
+      // Semi-transparent grey palm fill
       ctx.fillStyle = 'rgba(100, 100, 100, 0.4)';
       ctx.beginPath();
       ctx.moveTo(points[0].x, points[0].y);
@@ -264,7 +263,7 @@
       ctx.closePath();
       ctx.fill();
 
-      // Thick white skeleton outline
+      // Thick white skeleton
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 8;
       ctx.lineCap = 'round';
@@ -277,7 +276,7 @@
         ctx.stroke();
       }
 
-      // Extra palm outline
+      // Extra palm outline stroke
       ctx.beginPath();
       for (let k = 0; k < PALM_OUTLINE.length; k++) {
         const [i, j] = PALM_OUTLINE[k];
@@ -292,22 +291,23 @@
     let pinchTimer = null;
 
     async function startCamera() {
-      const constraints = { video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } };
+      const constraints = { 
+        video: { 
+          facingMode: "environment", 
+          width: { ideal: 1280 }, 
+          height: { ideal: 720 } 
+        } 
+      };
 
       try {
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        videoLeft.srcObject = stream;
-        videoRight.srcObject = stream.clone();
+        video.srcObject = stream;
 
-        videoLeft.onloadedmetadata = () => {
-          handCanvasLeft.width = videoLeft.videoWidth;
-          handCanvasLeft.height = videoLeft.videoHeight;
-          handCanvasRight.width = videoLeft.videoWidth;
-          handCanvasRight.height = videoLeft.videoHeight;
+        video.onloadedmetadata = () => {
+          handCanvas.width = video.videoWidth;
+          handCanvas.height = video.videoHeight;
 
-          videoLeft.play();
-          videoRight.play();
-
+          video.play();
           setupThree();
           setupHandTracking();
         };
@@ -331,9 +331,9 @@
         });
 
         function predict() {
-          if (videoLeft.readyState >= videoLeft.HAVE_ENOUGH_DATA) {
+          if (video.readyState >= video.HAVE_ENOUGH_DATA) {
             const timestamp = performance.now();
-            const results = handLandmarker.detectForVideo(videoLeft, timestamp);
+            const results = handLandmarker.detectForVideo(video, timestamp);
 
             let anyPinch = false;
             let currentLandmarks = null;
@@ -345,13 +345,13 @@
               const thumb = lm[4];
               const index = lm[8];
               const dist = Math.hypot(thumb.x - index.x, thumb.y - index.y, thumb.z - index.z);
+
               if (dist < 0.06) anyPinch = true;
             }
 
-            drawHandOverlay(ctxLeft, currentLandmarks, handCanvasLeft.width, handCanvasLeft.height);
-            drawHandOverlay(ctxRight, currentLandmarks, handCanvasLeft.width, handCanvasLeft.height);
+            drawHandOverlay(ctx, currentLandmarks, handCanvas.width, handCanvas.height);
 
-            // Double pinch to toggle virtual world
+            // Double pinch → toggle virtual world
             if (anyPinch && !lastPinch) {
               pinchCount++;
               if (pinchCount === 1) {
@@ -368,7 +368,9 @@
         }
 
         predict();
-      } catch (err) { console.error(err); }
+      } catch (err) {
+        console.error(err);
+      }
     }
 
     startCamera();
