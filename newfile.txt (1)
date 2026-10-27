@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* * FAIRVIEW AI * Grade 9 Alberta Study Assistant * TI-84 Plus CE * * Features: * - ChatGPT-style interface * - Dark and light themes * - Text entry using calculator keys * - Grade 9 subject lessons * - Arithmetic calculator * - Interactive quizzes * - Hints and answer explanations * - Flashcards * - Seven-day study plan * - Fun AI conversation responses * - Response scrolling * * This is an offline, rule-based chatbot. */
+/* * ChatGPT-style offline assistant * Grade 9 Alberta study helper * TI-84 Plus CE * * Features: * - Light and dark chat themes * - Text entry using calculator keys * - Grade 9 subject lessons * - Arithmetic calculator * - Interactive quizzes * - Hints and answer explanations * - Flashcards * - Seven-day study plan * - Fun AI conversation responses * - Response scrolling * * This is an offline, rule-based chatbot. */
 
 #define INPUT_SIZE 48
 #define RESPONSE_SIZE 1200
@@ -23,12 +23,12 @@ typedef struct {
 } Theme;
 
 const Theme dark_theme = { 0x00, 0x21, 0xFF, 0x6B, 0x11, 0x19, 0x18 };
-const Theme light_theme = { 0xFF, 0xEE, 0x00, 0x55, 0xF1, 0x19, 0xE0 };
+const Theme light_theme = { 0xFF, 0xEE, 0x00, 0x55, 0xFF, 0x19, 0xF1 };
 
-bool is_dark_mode = true;
+bool is_dark_mode = false;
 char user_input[INPUT_SIZE] = "";
 char current_response[RESPONSE_SIZE] = 
-    "FAIRVIEW AI\n\n"
+    "ChatGPT-style offline assistant :)\n\n"
     "Hey! Welcome to your calculator AI.\n\n"
     "Ask me about school, science, math, "
     "life, jokes, or anything fun!\n\n"
@@ -39,6 +39,8 @@ int input_len = 0;
 int cursor_pos = 0;
 int scroll_line = 0;
 int response_line_count = 0;
+int response_visible_chars = 0;
+int typing_frame = 0;
 
 bool quiz_active = false;
 bool quiz_waiting = false;
@@ -79,6 +81,8 @@ void set_response(const char *text) {
     current_response[RESPONSE_SIZE - 1] = '\0';
     scroll_line = 0;
     response_line_count = 0;
+    response_visible_chars = 0;
+    typing_frame = 0;
 }
 
 void append_response(const char *text) {
@@ -881,7 +885,7 @@ void evaluate_query(void) {
     /* Help */
     if (strcmp(user_input, "help") == 0 || strcmp(user_input, "commands") == 0) {
         set_response(
-            "FAIRVIEW AI COMMANDS\n\n"
+            "CHATGPT COMMANDS\n\n"
             "SCHOOL LESSONS:\n"
             "MATH, EXPONENTS, POLYNOMIALS\n"
             "EQUATIONS, FRACTIONS, PROBABILITY\n"
@@ -1026,7 +1030,8 @@ int make_lines(char lines[MAX_LINES][LINE_SIZE]) {
     int pos = 0;
     int col = 0;
     memset(lines, 0, MAX_LINES * LINE_SIZE);
-    while (current_response[pos] != '\0' && count < MAX_LINES) {
+    while (pos < response_visible_chars &&
+           current_response[pos] != '\0' && count < MAX_LINES) {
         char c = current_response[pos++];
         if (c == '\n') {
             lines[count][col] = '\0';
@@ -1070,7 +1075,7 @@ void draw_ui(void) {
     const Theme *t = is_dark_mode ? &dark_theme : &light_theme;
     char lines[MAX_LINES][LINE_SIZE];
     int total_lines = make_lines(lines);
-    int visible_lines = 11;
+    int visible_lines = 10;
     int i;
 
     gfx_SetColor(t->bg);
@@ -1082,14 +1087,29 @@ void draw_ui(void) {
     gfx_SetColor(t->accent);
     gfx_FillCircle(14, 13, 7);
     gfx_SetColor(t->bg);
-    gfx_Circle(14, 13, 4);
+    gfx_FillCircle(11, 11, 1);
+    gfx_FillCircle(17, 11, 1);
+    gfx_Line(11, 15, 17, 15);
     gfx_SetTextFGColor(t->text);
     gfx_SetTextBGColor(t->sidebar);
     gfx_SetTextXY(28, 9);
-    gfx_PrintString("FAIRVIEW AI [MODE]");
+    gfx_PrintString("ChatGPT");
+    gfx_SetTextFGColor(t->subtext);
+    gfx_SetTextXY(264, 9);
+    gfx_PrintString("OFFLINE");
 
     /* Response bubble */
     draw_rounded_rect(8, 31, 304, 137, t->bubble);
+    gfx_SetColor(t->accent);
+    gfx_FillCircle(17, 40, 6);
+    gfx_SetColor(t->bg);
+    gfx_FillCircle(15, 38, 1);
+    gfx_FillCircle(19, 38, 1);
+    gfx_Line(14, 42, 20, 42);
+    gfx_SetTextFGColor(t->text);
+    gfx_SetTextBGColor(t->bubble);
+    gfx_SetTextXY(28, 36);
+    gfx_PrintString("ChatGPT  :)");
     gfx_SetTextFGColor(t->text);
     gfx_SetTextBGColor(t->bubble);
 
@@ -1108,15 +1128,21 @@ void draw_ui(void) {
         if (line_index >= total_lines) {
             break;
         }
-        gfx_SetTextXY(14, 38 + i * 11);
+        gfx_SetTextXY(14, 49 + i * 11);
         gfx_PrintString(lines[line_index]);
     }
 
     /* Suggestions */
     draw_rounded_rect(8, 171, 304, 23, t->sidebar);
+    gfx_SetColor(t->accent);
+    gfx_FillCircle(15, 182, 4);
+    gfx_SetColor(t->bg);
+    gfx_FillCircle(14, 181, 1);
+    gfx_FillCircle(17, 181, 1);
+    gfx_Line(13, 184, 17, 184);
     gfx_SetTextFGColor(t->accent);
     gfx_SetTextBGColor(t->sidebar);
-    gfx_SetTextXY(14, 178);
+    gfx_SetTextXY(24, 178);
     gfx_PrintString(next_suggestion);
 
     /* Input area */
@@ -1124,7 +1150,7 @@ void draw_ui(void) {
     gfx_SetTextFGColor(t->subtext);
     gfx_SetTextBGColor(t->prompt_bg);
     gfx_SetTextXY(14, 204);
-    gfx_PrintString("TOPIC: ");
+    gfx_PrintString("SUGGESTED: ");
     gfx_PrintString(word_recommendation);
 
     gfx_SetTextFGColor(t->text);
@@ -1132,7 +1158,7 @@ void draw_ui(void) {
     gfx_SetTextXY(14, 218);
     if (input_len == 0) {
         gfx_SetTextFGColor(t->subtext);
-        gfx_PrintString("Type a question...");
+        gfx_PrintString("Message ChatGPT :)");
     } else {
         char left[INPUT_SIZE];
         strncpy(left, user_input, cursor_pos);
@@ -1228,8 +1254,17 @@ int main(void) {
             insert_character(c);
         }
 
+        if (response_visible_chars < (int)strlen(current_response)) {
+            typing_frame++;
+            if (typing_frame >= 2) {
+                typing_frame = 0;
+                response_visible_chars++;
+            }
+        }
+
         draw_ui();
         gfx_BlitBuffer();
+        delay(2);
     }
 
     gfx_End();
