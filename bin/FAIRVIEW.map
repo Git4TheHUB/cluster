@@ -1,0 +1,1074 @@
+
+Merging object attributes
+
+
+Discarded input sections
+
+ .comment       0x00000000      0x150 obj/FAIRVIEW.o
+ .note.GNU-stack
+                0x00000000        0x0 obj/FAIRVIEW.o
+ .init.weak_crt
+                0x00000000       0x10 obj/FAIRVIEW.o
+ .text          0x00000000        0x0 obj/crt0.o
+ .data          0x00000000        0x0 obj/crt0.o
+ .bss           0x00000000        0x0 obj/crt0.o
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+prgm             0x00d1a87f         0x00400000
+bss              0x00d052c6         0x0000ed12
+*default*        0x00000000         0xffffffff
+
+Linker script and memory map
+
+                0x00d1a87f                        LOAD_ADDR = 0xd1a87f
+                0x00d052c6                        BSSHEAP_LOW = 0xd052c6
+                0x00d13fd8                        BSSHEAP_HIGH = 0xd13fd8
+                0x00d1a87e                        STACK_HIGH = 0xd1a87e
+                0x00000001                        __TICE__ = 0x1
+                0x00d1a87f                        . = LOAD_ADDR
+
+.header         0x00d1a87f       0x11
+ *(.header)
+ .header        0x00d1a87f        0x3 obj/crt0.o
+ *(.header.icon)
+ .header.icon   0x00d1a882        0xe obj/FAIRVIEW.o
+                0x00d1a887                ___description
+
+.init           0x00d1a890      0x10f
+ *(.init)
+ .init          0x00d1a890      0x10f obj/crt0.o
+                0x00d1a890                __start
+                0x00d1a8ed                __libload_library_GRAPHX
+                0x00d1a8f6                _gfx_Begin
+                0x00d1a8fa                _gfx_End
+                0x00d1a8fe                _gfx_SetColor
+                0x00d1a902                _gfx_SetPixel
+                0x00d1a906                _gfx_SetDraw
+                0x00d1a90a                _gfx_Blit
+                0x00d1a90e                _gfx_PrintString
+                0x00d1a912                _gfx_SetTextXY
+                0x00d1a916                _gfx_SetTextBGColor
+                0x00d1a91a                _gfx_SetTextFGColor
+                0x00d1a91e                _gfx_Circle
+                0x00d1a922                _gfx_FillCircle
+                0x00d1a926                _gfx_FillRectangle
+                0x00d1a963                ___exithl
+                0x00d1a964                _exit.sp
+
+.text           0x00d1a99f     0x4437
+ *(.text.unlikely .text.*_unlikely .text.unlikely.*)
+ *(.text.exit .text.exit.*)
+ *(.text.startup .text.startup.*)
+ *(.text.hot .text.hot.*)
+ *(SORT_BY_NAME(.text.sorted.*))
+ *(.text .stub .text.* .gnu.linkonce.t.*)
+ .text          0x00d1a99f      0x642 obj/FAIRVIEW.o
+                0x00d1a99f                __land
+                0x00d1a9a3                __iand
+                0x00d1a9ba                __dcmp
+                0x00d1aa18                __frameset
+                0x00d1aa26                __frameset0
+                0x00d1aa31                __ftod
+                0x00d1aa79                __imuls
+                0x00d1aa79                __imulu
+                0x00d1aaa9                __ineg
+                0x00d1aaa9                __sneg
+                0x00d1aab2                __sshl
+                0x00d1aab2                __ishl
+                0x00d1aad8                __ishru
+                0x00d1aadd                __ishrs
+                0x00d1ab19                __lladd
+                0x00d1ab3d                __lland
+                0x00d1ab79                __llcmps
+                0x00d1aba6                __llcmpu
+                0x00d1abd0                __llcmpzero
+                0x00d1abd0                __llequzero
+                0x00d1abe5                __lldivu
+                0x00d1abf9                __lldvrmu
+                0x00d1ac00                __lldvrmu.hijack
+                0x00d1ac57                __llmulu
+                0x00d1acac                __llshl
+                0x00d1acc6                __llshru
+                0x00d1acf6                __llshrs
+                0x00d1ad32                __llxor
+                0x00d1ad6e                __sand
+                0x00d1ad77                __setflag
+                0x00d1ad81                __lxor
+                0x00d1ad85                __ixor
+                0x00d1ad9c                _atoi
+                0x00d1add4                _isspace
+                0x00d1ade3                _memcpy
+                0x00d1ae04                _strcspn
+                0x00d1ae0b                _strpbrk
+                0x00d1ae3e                _strspn
+                0x00d1ae6f                _strtoimax
+                0x00d1ae6f                _strtoll
+                0x00d1ae9c                _strtoull
+                0x00d1ae9c                _strtoumax
+                0x00d1afc8                __llneg
+                0x00d1afc9                __llneg.hijack_nc
+ .text._lower_text
+                0x00d1afe1       0x26 obj/FAIRVIEW.o
+                0x00d1afe1                _lower_text
+ .text._has     0x00d1b007       0x21 obj/FAIRVIEW.o
+                0x00d1b007                _has
+ .text._set_response
+                0x00d1b028       0x2b obj/FAIRVIEW.o
+                0x00d1b028                _set_response
+ .text._set_suggestion
+                0x00d1b053       0x21 obj/FAIRVIEW.o
+                0x00d1b053                _set_suggestion
+ .text._set_recommendation
+                0x00d1b074       0x21 obj/FAIRVIEW.o
+                0x00d1b074                _set_recommendation
+ .text._next_question
+                0x00d1b095       0x67 obj/FAIRVIEW.o
+                0x00d1b095                _next_question
+ .text._show_question
+                0x00d1b0fc      0x140 obj/FAIRVIEW.o
+                0x00d1b0fc                _show_question
+ .text._start_quiz
+                0x00d1b23c       0x35 obj/FAIRVIEW.o
+                0x00d1b23c                _start_quiz
+ .text._submit_answer
+                0x00d1b271      0x226 obj/FAIRVIEW.o
+                0x00d1b271                _submit_answer
+ .text._show_card
+                0x00d1b497       0xf5 obj/FAIRVIEW.o
+                0x00d1b497                _show_card
+ .text._start_cards
+                0x00d1b58c       0x20 obj/FAIRVIEW.o
+                0x00d1b58c                _start_cards
+ .text._show_study_day
+                0x00d1b5ac       0xa3 obj/FAIRVIEW.o
+                0x00d1b5ac                _show_study_day
+ .text._fun_response
+                0x00d1b64f      0x3d5 obj/FAIRVIEW.o
+                0x00d1b64f                _fun_response
+ .text._evaluate_query
+                0x00d1ba24      0x7d3 obj/FAIRVIEW.o
+                0x00d1ba24                _evaluate_query
+ .text._make_lines
+                0x00d1c1f7      0x106 obj/FAIRVIEW.o
+                0x00d1c1f7                _make_lines
+ .text._draw_rounded_rect
+                0x00d1c2fd       0xd2 obj/FAIRVIEW.o
+                0x00d1c2fd                _draw_rounded_rect
+ .text._draw_ui
+                0x00d1c3cf      0x625 obj/FAIRVIEW.o
+                0x00d1c3cf                _draw_ui
+ .text._insert_character
+                0x00d1c9f4       0x70 obj/FAIRVIEW.o
+                0x00d1c9f4                _insert_character
+ .text._delete_character
+                0x00d1ca64       0x6f obj/FAIRVIEW.o
+                0x00d1ca64                _delete_character
+ .text._main    0x00d1cad3      0x15c obj/FAIRVIEW.o
+                0x00d1cad3                _main
+ .text._npf_vpprintf
+                0x00d1cc2f     0x1775 obj/FAIRVIEW.o
+                0x00d1cc2f                _npf_vpprintf
+ .text._NPF_PUTC_IMPL
+                0x00d1e3a4       0x2d obj/FAIRVIEW.o
+ .text._npf_utoa_rev
+                0x00d1e3d1       0xe6 obj/FAIRVIEW.o
+ .text._vsnprintf
+                0x00d1e4b7       0x88 obj/FAIRVIEW.o
+                0x00d1e4b7                _vsnprintf
+ .text._npf_bufputc
+                0x00d1e53f       0x25 obj/FAIRVIEW.o
+ .text._npf_bufputc_nop
+                0x00d1e564        0x7 obj/FAIRVIEW.o
+ .text._snprintf
+                0x00d1e56b       0x28 obj/FAIRVIEW.o
+                0x00d1e56b                _snprintf
+ .text.__bctlz  0x00d1e593       0x22 obj/FAIRVIEW.o
+                0x00d1e593                __bctlz
+ .text.__sctlz  0x00d1e5b5        0xc obj/FAIRVIEW.o
+                0x00d1e5b5                __sctlz
+ .text.__ictlz  0x00d1e5c1       0x12 obj/FAIRVIEW.o
+                0x00d1e5c1                __ictlz
+ .text.__llctlz
+                0x00d1e5d3        0xe obj/FAIRVIEW.o
+                0x00d1e5d3                __llctlz
+ .text.__i48ctlz
+                0x00d1e5e1       0x15 obj/FAIRVIEW.o
+                0x00d1e5e1                __i48ctlz
+ .text._vsscanf
+                0x00d1e5f6      0x7bd obj/FAIRVIEW.o
+                0x00d1e5f6                _vsscanf
+ .text._sscanf  0x00d1edb3       0x23 obj/FAIRVIEW.o
+                0x00d1edb3                _sscanf
+ *(.gnu.warning)
+
+.rodata         0x00d1edd6     0x4aaa
+ *(.rodata .rodata.* .gnu.linkonce.r.*)
+ .rodata._evaluate_query
+                0x00d1edd6       0x12 obj/FAIRVIEW.o
+ .rodata._main  0x00d1ede8       0x2d obj/FAIRVIEW.o
+ .rodata._.str  0x00d1ee15        0x9 obj/FAIRVIEW.o
+ .rodata._.str.1
+                0x00d1ee1e       0x1d obj/FAIRVIEW.o
+ .rodata._.str.2
+                0x00d1ee3b      0x138 obj/FAIRVIEW.o
+ .rodata._.str.3
+                0x00d1ef73       0x1c obj/FAIRVIEW.o
+ .rodata._.str.4
+                0x00d1ef8f        0xa obj/FAIRVIEW.o
+ .rodata._.str.5
+                0x00d1ef99       0x20 obj/FAIRVIEW.o
+ .rodata._.str.6
+                0x00d1efb9      0x117 obj/FAIRVIEW.o
+ .rodata._.str.7
+                0x00d1f0d0       0x1e obj/FAIRVIEW.o
+ .rodata._.str.8
+                0x00d1f0ee        0xc obj/FAIRVIEW.o
+ .rodata._.str.9
+                0x00d1f0fa       0x22 obj/FAIRVIEW.o
+ .rodata._.str.10
+                0x00d1f11c      0x132 obj/FAIRVIEW.o
+ .rodata._.str.11
+                0x00d1f24e       0x1c obj/FAIRVIEW.o
+ .rodata._.str.12
+                0x00d1f26a        0xa obj/FAIRVIEW.o
+ .rodata._.str.13
+                0x00d1f274       0x21 obj/FAIRVIEW.o
+ .rodata._.str.14
+                0x00d1f295       0xe0 obj/FAIRVIEW.o
+ .rodata._.str.15
+                0x00d1f375       0x1c obj/FAIRVIEW.o
+ .rodata._.str.16
+                0x00d1f391        0xa obj/FAIRVIEW.o
+ .rodata._.str.17
+                0x00d1f39b       0x24 obj/FAIRVIEW.o
+ .rodata._.str.18
+                0x00d1f3bf      0x10a obj/FAIRVIEW.o
+ .rodata._.str.19
+                0x00d1f4c9        0xf obj/FAIRVIEW.o
+ .rodata._.str.20
+                0x00d1f4d8       0x14 obj/FAIRVIEW.o
+ .rodata._.str.21
+                0x00d1f4ec       0x2a obj/FAIRVIEW.o
+ .rodata._.str.22
+                0x00d1f516       0xfb obj/FAIRVIEW.o
+ .rodata._.str.23
+                0x00d1f611        0xc obj/FAIRVIEW.o
+ .rodata._.str.24
+                0x00d1f61d       0x25 obj/FAIRVIEW.o
+ .rodata._.str.25
+                0x00d1f642      0x11c obj/FAIRVIEW.o
+ .rodata._.str.26
+                0x00d1f75e        0x8 obj/FAIRVIEW.o
+ .rodata._.str.27
+                0x00d1f766       0x13 obj/FAIRVIEW.o
+ .rodata._.str.28
+                0x00d1f779      0x113 obj/FAIRVIEW.o
+ .rodata._.str.29
+                0x00d1f88c       0x1b obj/FAIRVIEW.o
+ .rodata._.str.30
+                0x00d1f8a7        0x6 obj/FAIRVIEW.o
+ .rodata._.str.31
+                0x00d1f8ad       0x3e obj/FAIRVIEW.o
+ .rodata._.str.32
+                0x00d1f8eb      0x11a obj/FAIRVIEW.o
+ .rodata._.str.33
+                0x00d1fa05       0x1f obj/FAIRVIEW.o
+ .rodata._.str.34
+                0x00d1fa24        0xa obj/FAIRVIEW.o
+ .rodata._.str.35
+                0x00d1fa2e       0x4b obj/FAIRVIEW.o
+ .rodata._.str.36
+                0x00d1fa79      0x143 obj/FAIRVIEW.o
+ .rodata._.str.37
+                0x00d1fbbc        0xc obj/FAIRVIEW.o
+ .rodata._.str.38
+                0x00d1fbc8       0x4d obj/FAIRVIEW.o
+ .rodata._.str.39
+                0x00d1fc15      0x152 obj/FAIRVIEW.o
+ .rodata._.str.40
+                0x00d1fd67       0x12 obj/FAIRVIEW.o
+ .rodata._.str.41
+                0x00d1fd79        0xd obj/FAIRVIEW.o
+ .rodata._.str.42
+                0x00d1fd86       0x62 obj/FAIRVIEW.o
+ .rodata._.str.43
+                0x00d1fde8      0x161 obj/FAIRVIEW.o
+ .rodata._.str.44
+                0x00d1ff49        0x6 obj/FAIRVIEW.o
+ .rodata._.str.45
+                0x00d1ff4f       0x61 obj/FAIRVIEW.o
+ .rodata._.str.46
+                0x00d1ffb0      0x156 obj/FAIRVIEW.o
+ .rodata._.str.47
+                0x00d20106        0x8 obj/FAIRVIEW.o
+ .rodata._.str.48
+                0x00d2010e       0x57 obj/FAIRVIEW.o
+ .rodata._.str.49
+                0x00d20165      0x130 obj/FAIRVIEW.o
+ .rodata._.str.50
+                0x00d20295       0x1e obj/FAIRVIEW.o
+ .rodata._.str.51
+                0x00d202b3       0x11 obj/FAIRVIEW.o
+ .rodata._.str.52
+                0x00d202c4       0x46 obj/FAIRVIEW.o
+ .rodata._.str.53
+                0x00d2030a      0x17e obj/FAIRVIEW.o
+ .rodata._.str.54
+                0x00d20488       0x12 obj/FAIRVIEW.o
+ .rodata._.str.55
+                0x00d2049a        0xf obj/FAIRVIEW.o
+ .rodata._.str.56
+                0x00d204a9       0x6c obj/FAIRVIEW.o
+ .rodata._.str.57
+                0x00d20515      0x12b obj/FAIRVIEW.o
+ .rodata._.str.58
+                0x00d20640       0x1f obj/FAIRVIEW.o
+ .rodata._.str.59
+                0x00d2065f        0xb obj/FAIRVIEW.o
+ .rodata._.str.60
+                0x00d2066a       0x3c obj/FAIRVIEW.o
+ .rodata._.str.61
+                0x00d206a6      0x153 obj/FAIRVIEW.o
+ .rodata._.str.62
+                0x00d207f9       0x1c obj/FAIRVIEW.o
+ .rodata._.str.63
+                0x00d20815        0x8 obj/FAIRVIEW.o
+ .rodata._.str.64
+                0x00d2081d       0x2e obj/FAIRVIEW.o
+ .rodata._.str.65
+                0x00d2084b      0x139 obj/FAIRVIEW.o
+ .rodata._.str.66
+                0x00d20984        0x9 obj/FAIRVIEW.o
+ .rodata._.str.67
+                0x00d2098d       0x4d obj/FAIRVIEW.o
+ .rodata._.str.68
+                0x00d209da      0x12c obj/FAIRVIEW.o
+ .rodata._.str.69
+                0x00d20b06       0x10 obj/FAIRVIEW.o
+ .rodata._.str.70
+                0x00d20b16        0x8 obj/FAIRVIEW.o
+ .rodata._.str.71
+                0x00d20b1e       0x60 obj/FAIRVIEW.o
+ .rodata._.str.72
+                0x00d20b7e      0x129 obj/FAIRVIEW.o
+ .rodata._.str.73
+                0x00d20ca7        0x9 obj/FAIRVIEW.o
+ .rodata._.str.74
+                0x00d20cb0       0x45 obj/FAIRVIEW.o
+ .rodata._.str.75
+                0x00d20cf5      0x139 obj/FAIRVIEW.o
+ .rodata._.str.76
+                0x00d20e2e       0x1f obj/FAIRVIEW.o
+ .rodata._lessons
+                0x00d20e4d       0xfc obj/FAIRVIEW.o
+                0x00d20e4d                _lessons
+ .rodata._.str.77
+                0x00d20f49        0xd obj/FAIRVIEW.o
+ .rodata._.str.78
+                0x00d20f56        0x2 obj/FAIRVIEW.o
+ .rodata._.str.79
+                0x00d20f58        0x2 obj/FAIRVIEW.o
+ .rodata._.str.80
+                0x00d20f5a        0x3 obj/FAIRVIEW.o
+ .rodata._.str.81
+                0x00d20f5d        0x3 obj/FAIRVIEW.o
+ .rodata._.str.82
+                0x00d20f60       0x21 obj/FAIRVIEW.o
+ .rodata._.str.83
+                0x00d20f81       0x14 obj/FAIRVIEW.o
+ .rodata._.str.84
+                0x00d20f95       0x14 obj/FAIRVIEW.o
+ .rodata._.str.85
+                0x00d20fa9        0x2 obj/FAIRVIEW.o
+ .rodata._.str.86
+                0x00d20fab        0x2 obj/FAIRVIEW.o
+ .rodata._.str.87
+                0x00d20fad        0x2 obj/FAIRVIEW.o
+ .rodata._.str.88
+                0x00d20faf        0x3 obj/FAIRVIEW.o
+ .rodata._.str.89
+                0x00d20fb2       0x1e obj/FAIRVIEW.o
+ .rodata._.str.90
+                0x00d20fd0       0x13 obj/FAIRVIEW.o
+ .rodata._.str.91
+                0x00d20fe3       0x13 obj/FAIRVIEW.o
+ .rodata._.str.92
+                0x00d20ff6        0x3 obj/FAIRVIEW.o
+ .rodata._.str.93
+                0x00d20ff9        0x4 obj/FAIRVIEW.o
+ .rodata._.str.94
+                0x00d20ffd        0x2 obj/FAIRVIEW.o
+ .rodata._.str.95
+                0x00d20fff       0x14 obj/FAIRVIEW.o
+ .rodata._.str.96
+                0x00d21013        0xe obj/FAIRVIEW.o
+ .rodata._.str.97
+                0x00d21021       0x1f obj/FAIRVIEW.o
+ .rodata._.str.98
+                0x00d21040        0x2 obj/FAIRVIEW.o
+ .rodata._.str.99
+                0x00d21042        0x3 obj/FAIRVIEW.o
+ .rodata._.str.100
+                0x00d21045       0x29 obj/FAIRVIEW.o
+ .rodata._.str.101
+                0x00d2106e        0xc obj/FAIRVIEW.o
+ .rodata._.str.102
+                0x00d2107a       0x13 obj/FAIRVIEW.o
+ .rodata._.str.103
+                0x00d2108d        0x4 obj/FAIRVIEW.o
+ .rodata._.str.104
+                0x00d21091        0x4 obj/FAIRVIEW.o
+ .rodata._.str.105
+                0x00d21095        0x4 obj/FAIRVIEW.o
+ .rodata._.str.106
+                0x00d21099        0x2 obj/FAIRVIEW.o
+ .rodata._.str.107
+                0x00d2109b       0x16 obj/FAIRVIEW.o
+ .rodata._.str.108
+                0x00d210b1       0x11 obj/FAIRVIEW.o
+ .rodata._.str.109
+                0x00d210c2       0x47 obj/FAIRVIEW.o
+ .rodata._.str.110
+                0x00d21109        0x3 obj/FAIRVIEW.o
+ .rodata._.str.111
+                0x00d2110c       0x15 obj/FAIRVIEW.o
+ .rodata._.str.112
+                0x00d21121       0x25 obj/FAIRVIEW.o
+ .rodata._.str.113
+                0x00d21146       0x26 obj/FAIRVIEW.o
+ .rodata._.str.114
+                0x00d2116c        0x7 obj/FAIRVIEW.o
+ .rodata._.str.115
+                0x00d21173        0x8 obj/FAIRVIEW.o
+ .rodata._.str.116
+                0x00d2117b        0x9 obj/FAIRVIEW.o
+ .rodata._.str.117
+                0x00d21184        0x8 obj/FAIRVIEW.o
+ .rodata._.str.118
+                0x00d2118c       0x2a obj/FAIRVIEW.o
+ .rodata._.str.119
+                0x00d211b6       0x2b obj/FAIRVIEW.o
+ .rodata._.str.120
+                0x00d211e1       0x25 obj/FAIRVIEW.o
+ .rodata._.str.121
+                0x00d21206        0x5 obj/FAIRVIEW.o
+ .rodata._.str.122
+                0x00d2120b        0x7 obj/FAIRVIEW.o
+ .rodata._.str.123
+                0x00d21212        0x4 obj/FAIRVIEW.o
+ .rodata._.str.124
+                0x00d21216        0x6 obj/FAIRVIEW.o
+ .rodata._.str.125
+                0x00d2121c       0x2c obj/FAIRVIEW.o
+ .rodata._.str.126
+                0x00d21248       0x20 obj/FAIRVIEW.o
+ .rodata._.str.127
+                0x00d21268       0x20 obj/FAIRVIEW.o
+ .rodata._.str.128
+                0x00d21288        0x5 obj/FAIRVIEW.o
+ .rodata._.str.129
+                0x00d2128d        0xb obj/FAIRVIEW.o
+ .rodata._.str.130
+                0x00d21298        0x9 obj/FAIRVIEW.o
+ .rodata._.str.131
+                0x00d212a1        0xc obj/FAIRVIEW.o
+ .rodata._.str.132
+                0x00d212ad       0x2d obj/FAIRVIEW.o
+ .rodata._.str.133
+                0x00d212da       0x24 obj/FAIRVIEW.o
+ .rodata._.str.134
+                0x00d212fe       0x19 obj/FAIRVIEW.o
+ .rodata._.str.135
+                0x00d21317        0x7 obj/FAIRVIEW.o
+ .rodata._.str.136
+                0x00d2131e        0x8 obj/FAIRVIEW.o
+ .rodata._.str.137
+                0x00d21326        0x8 obj/FAIRVIEW.o
+ .rodata._.str.138
+                0x00d2132e       0x1f obj/FAIRVIEW.o
+ .rodata._.str.139
+                0x00d2134d       0x22 obj/FAIRVIEW.o
+ .rodata._.str.140
+                0x00d2136f       0x22 obj/FAIRVIEW.o
+ .rodata._.str.141
+                0x00d21391        0xf obj/FAIRVIEW.o
+ .rodata._.str.142
+                0x00d213a0       0x11 obj/FAIRVIEW.o
+ .rodata._.str.143
+                0x00d213b1       0x17 obj/FAIRVIEW.o
+ .rodata._.str.144
+                0x00d213c8        0xe obj/FAIRVIEW.o
+ .rodata._.str.145
+                0x00d213d6       0x28 obj/FAIRVIEW.o
+ .rodata._.str.146
+                0x00d213fe       0x2f obj/FAIRVIEW.o
+ .rodata._.str.147
+                0x00d2142d       0x1c obj/FAIRVIEW.o
+ .rodata._.str.148
+                0x00d21449        0xe obj/FAIRVIEW.o
+ .rodata._.str.149
+                0x00d21457       0x12 obj/FAIRVIEW.o
+ .rodata._.str.150
+                0x00d21469        0xd obj/FAIRVIEW.o
+ .rodata._.str.151
+                0x00d21476       0x13 obj/FAIRVIEW.o
+ .rodata._.str.152
+                0x00d21489       0x2c obj/FAIRVIEW.o
+ .rodata._.str.153
+                0x00d214b5       0x26 obj/FAIRVIEW.o
+ .rodata._.str.154
+                0x00d214db       0x26 obj/FAIRVIEW.o
+ .rodata._.str.155
+                0x00d21501        0xa obj/FAIRVIEW.o
+ .rodata._.str.156
+                0x00d2150b        0x8 obj/FAIRVIEW.o
+ .rodata._.str.157
+                0x00d21513        0xf obj/FAIRVIEW.o
+ .rodata._.str.158
+                0x00d21522        0xe obj/FAIRVIEW.o
+ .rodata._.str.159
+                0x00d21530       0x2e obj/FAIRVIEW.o
+ .rodata._.str.160
+                0x00d2155e       0x2e obj/FAIRVIEW.o
+ .rodata._.str.161
+                0x00d2158c       0x38 obj/FAIRVIEW.o
+ .rodata._.str.162
+                0x00d215c4       0x10 obj/FAIRVIEW.o
+ .rodata._.str.163
+                0x00d215d4        0xd obj/FAIRVIEW.o
+ .rodata._.str.164
+                0x00d215e1        0x9 obj/FAIRVIEW.o
+ .rodata._.str.165
+                0x00d215ea        0x7 obj/FAIRVIEW.o
+ .rodata._.str.166
+                0x00d215f1       0x31 obj/FAIRVIEW.o
+ .rodata._.str.167
+                0x00d21622       0x31 obj/FAIRVIEW.o
+ .rodata._questions
+                0x00d21653      0x17a obj/FAIRVIEW.o
+                0x00d21653                _questions
+ .rodata._.str.168
+                0x00d217cd       0x3f obj/FAIRVIEW.o
+ .rodata._.str.169
+                0x00d2180c       0x1e obj/FAIRVIEW.o
+ .rodata._.str.170
+                0x00d2182a       0x53 obj/FAIRVIEW.o
+ .rodata._.str.171
+                0x00d2187d       0x17 obj/FAIRVIEW.o
+ .rodata._.str.172
+                0x00d21894       0x26 obj/FAIRVIEW.o
+ .rodata._.str.173
+                0x00d218ba       0x39 obj/FAIRVIEW.o
+ .rodata._.str.174
+                0x00d218f3       0x43 obj/FAIRVIEW.o
+ .rodata._.str.175
+                0x00d21936       0x1f obj/FAIRVIEW.o
+ .rodata._.str.176
+                0x00d21955       0x15 obj/FAIRVIEW.o
+ .rodata._.str.177
+                0x00d2196a       0x2a obj/FAIRVIEW.o
+ .rodata._.str.178
+                0x00d21994       0x16 obj/FAIRVIEW.o
+ .rodata._.str.179
+                0x00d219aa       0x49 obj/FAIRVIEW.o
+ .rodata._.str.180
+                0x00d219f3       0x12 obj/FAIRVIEW.o
+ .rodata._.str.181
+                0x00d21a05       0x2e obj/FAIRVIEW.o
+ .rodata._.str.182
+                0x00d21a33       0x15 obj/FAIRVIEW.o
+ .rodata._.str.183
+                0x00d21a48       0x29 obj/FAIRVIEW.o
+ .rodata._.str.184
+                0x00d21a71       0x11 obj/FAIRVIEW.o
+ .rodata._.str.185
+                0x00d21a82       0x33 obj/FAIRVIEW.o
+ .rodata._.str.186
+                0x00d21ab5       0x16 obj/FAIRVIEW.o
+ .rodata._.str.187
+                0x00d21acb       0x3e obj/FAIRVIEW.o
+ .rodata._.str.188
+                0x00d21b09       0x2b obj/FAIRVIEW.o
+ .rodata._.str.189
+                0x00d21b34       0x13 obj/FAIRVIEW.o
+ .rodata._.str.190
+                0x00d21b47       0x45 obj/FAIRVIEW.o
+ .rodata._.str.191
+                0x00d21b8c       0x16 obj/FAIRVIEW.o
+ .rodata._.str.192
+                0x00d21ba2       0x28 obj/FAIRVIEW.o
+ .rodata._.str.193
+                0x00d21bca       0x14 obj/FAIRVIEW.o
+ .rodata._.str.194
+                0x00d21bde       0x34 obj/FAIRVIEW.o
+ .rodata._.str.195
+                0x00d21c12       0x13 obj/FAIRVIEW.o
+ .rodata._.str.196
+                0x00d21c25       0x23 obj/FAIRVIEW.o
+ .rodata._.str.197
+                0x00d21c48       0x12 obj/FAIRVIEW.o
+ .rodata._.str.198
+                0x00d21c5a       0x20 obj/FAIRVIEW.o
+ .rodata._.str.199
+                0x00d21c7a       0x18 obj/FAIRVIEW.o
+ .rodata._.str.200
+                0x00d21c92       0x37 obj/FAIRVIEW.o
+ .rodata._.str.201
+                0x00d21cc9       0x14 obj/FAIRVIEW.o
+ .rodata._.str.202
+                0x00d21cdd       0x2d obj/FAIRVIEW.o
+ .rodata._.str.203
+                0x00d21d0a       0x24 obj/FAIRVIEW.o
+ .rodata._.str.204
+                0x00d21d2e       0x3b obj/FAIRVIEW.o
+ .rodata._cards
+                0x00d21d69       0x5a obj/FAIRVIEW.o
+                0x00d21d69                _cards
+ .rodata._.str.205
+                0x00d21dc3       0x1d obj/FAIRVIEW.o
+ .rodata._.str.206
+                0x00d21de0       0x32 obj/FAIRVIEW.o
+ .rodata._.str.207
+                0x00d21e12       0x13 obj/FAIRVIEW.o
+ .rodata._.str.208
+                0x00d21e25       0x66 obj/FAIRVIEW.o
+ .rodata._.str.209
+                0x00d21e8b       0x77 obj/FAIRVIEW.o
+ .rodata._.str.210
+                0x00d21f02       0x70 obj/FAIRVIEW.o
+ .rodata._.str.211
+                0x00d21f72       0x67 obj/FAIRVIEW.o
+ .rodata._.str.212
+                0x00d21fd9       0x77 obj/FAIRVIEW.o
+ .rodata._.str.213
+                0x00d22050       0x68 obj/FAIRVIEW.o
+ .rodata._.str.214
+                0x00d220b8       0x65 obj/FAIRVIEW.o
+ .rodata._.str.215
+                0x00d2211d       0x4d obj/FAIRVIEW.o
+ .rodata._.str.216
+                0x00d2216a        0xe obj/FAIRVIEW.o
+ .rodata._.str.217
+                0x00d22178       0x11 obj/FAIRVIEW.o
+ .rodata._.str.218
+                0x00d22189        0xe obj/FAIRVIEW.o
+ .rodata._.str.219
+                0x00d22197       0x12 obj/FAIRVIEW.o
+ .rodata._.str.220
+                0x00d221a9      0x100 obj/FAIRVIEW.o
+ .rodata._.str.221
+                0x00d222a9       0x19 obj/FAIRVIEW.o
+ .rodata._.str.222
+                0x00d222c2        0xf obj/FAIRVIEW.o
+ .rodata._.str.223
+                0x00d222d1       0x11 obj/FAIRVIEW.o
+ .rodata._.str.224
+                0x00d222e2       0x10 obj/FAIRVIEW.o
+ .rodata._.str.225
+                0x00d222f2       0xd9 obj/FAIRVIEW.o
+ .rodata._.str.226
+                0x00d223cb        0xd obj/FAIRVIEW.o
+ .rodata._.str.227
+                0x00d223d8       0x10 obj/FAIRVIEW.o
+ .rodata._.str.228
+                0x00d223e8      0x10e obj/FAIRVIEW.o
+ .rodata._.str.229
+                0x00d224f6       0x14 obj/FAIRVIEW.o
+ .rodata._.str.230
+                0x00d2250a        0x9 obj/FAIRVIEW.o
+ .rodata._.str.231
+                0x00d22513        0xa obj/FAIRVIEW.o
+ .rodata._.str.232
+                0x00d2251d      0x10e obj/FAIRVIEW.o
+ .rodata._.str.233
+                0x00d2262b       0x11 obj/FAIRVIEW.o
+ .rodata._.str.234
+                0x00d2263c        0xc obj/FAIRVIEW.o
+ .rodata._.str.235
+                0x00d22648        0xb obj/FAIRVIEW.o
+ .rodata._.str.236
+                0x00d22653       0xde obj/FAIRVIEW.o
+ .rodata._.str.237
+                0x00d22731        0x6 obj/FAIRVIEW.o
+ .rodata._.str.238
+                0x00d22737        0xa obj/FAIRVIEW.o
+ .rodata._.str.239
+                0x00d22741        0xe obj/FAIRVIEW.o
+ .rodata._.str.240
+                0x00d2274f       0xef obj/FAIRVIEW.o
+ .rodata._.str.241
+                0x00d2283e       0x16 obj/FAIRVIEW.o
+ .rodata._.str.242
+                0x00d22854        0xb obj/FAIRVIEW.o
+ .rodata._.str.243
+                0x00d2285f       0xec obj/FAIRVIEW.o
+ .rodata._.str.244
+                0x00d2294b       0x17 obj/FAIRVIEW.o
+ .rodata._.str.245
+                0x00d22962       0x11 obj/FAIRVIEW.o
+ .rodata._.str.246
+                0x00d22973       0xf5 obj/FAIRVIEW.o
+ .rodata._.str.247
+                0x00d22a68        0xc obj/FAIRVIEW.o
+ .rodata._.str.248
+                0x00d22a74        0x6 obj/FAIRVIEW.o
+ .rodata._.str.249
+                0x00d22a7a        0xe obj/FAIRVIEW.o
+ .rodata._.str.250
+                0x00d22a88        0xd obj/FAIRVIEW.o
+ .rodata._.str.251
+                0x00d22a95       0xe9 obj/FAIRVIEW.o
+ .rodata._.str.252
+                0x00d22b7e       0x1a obj/FAIRVIEW.o
+ .rodata._.str.253
+                0x00d22b98        0xb obj/FAIRVIEW.o
+ .rodata._.str.254
+                0x00d22ba3        0xc obj/FAIRVIEW.o
+ .rodata._.str.255
+                0x00d22baf        0x9 obj/FAIRVIEW.o
+ .rodata._.str.256
+                0x00d22bb8       0xce obj/FAIRVIEW.o
+ .rodata._.str.257
+                0x00d22c86       0x16 obj/FAIRVIEW.o
+ .rodata._.str.258
+                0x00d22c9c        0x5 obj/FAIRVIEW.o
+ .rodata._.str.259
+                0x00d22ca1        0x6 obj/FAIRVIEW.o
+ .rodata._.str.260
+                0x00d22ca7        0xe obj/FAIRVIEW.o
+ .rodata._.str.261
+                0x00d22cb5       0xb2 obj/FAIRVIEW.o
+ .rodata._.str.262
+                0x00d22d67       0x16 obj/FAIRVIEW.o
+ .rodata._.str.263
+                0x00d22d7d        0x7 obj/FAIRVIEW.o
+ .rodata._.str.264
+                0x00d22d84       0xb9 obj/FAIRVIEW.o
+ .rodata._.str.265
+                0x00d22e3d       0x14 obj/FAIRVIEW.o
+ .rodata._.str.266
+                0x00d22e51        0x6 obj/FAIRVIEW.o
+ .rodata._.str.267
+                0x00d22e57      0x116 obj/FAIRVIEW.o
+ .rodata._.str.268
+                0x00d22f6d       0x1b obj/FAIRVIEW.o
+ .rodata._.str.269
+                0x00d22f88        0xd obj/FAIRVIEW.o
+ .rodata._.str.270
+                0x00d22f95       0x10 obj/FAIRVIEW.o
+ .rodata._.str.271
+                0x00d22fa5      0x115 obj/FAIRVIEW.o
+ .rodata._.str.272
+                0x00d230ba        0xa obj/FAIRVIEW.o
+ .rodata._.str.273
+                0x00d230c4        0x7 obj/FAIRVIEW.o
+ .rodata._.str.274
+                0x00d230cb       0x8a obj/FAIRVIEW.o
+ .rodata._.str.275
+                0x00d23155        0xa obj/FAIRVIEW.o
+ .rodata._.str.276
+                0x00d2315f        0x6 obj/FAIRVIEW.o
+ .rodata._.str.277
+                0x00d23165        0x3 obj/FAIRVIEW.o
+ .rodata._.str.278
+                0x00d23168        0x4 obj/FAIRVIEW.o
+ .rodata._.str.279
+                0x00d2316c       0xa2 obj/FAIRVIEW.o
+ .rodata._.str.280
+                0x00d2320e       0x1c obj/FAIRVIEW.o
+ .rodata._.str.281
+                0x00d2322a      0x102 obj/FAIRVIEW.o
+ .rodata._.str.282
+                0x00d2332c       0x19 obj/FAIRVIEW.o
+ .rodata._.str.283
+                0x00d23345        0xb obj/FAIRVIEW.o
+ .rodata._.str.284
+                0x00d23350       0x43 obj/FAIRVIEW.o
+ .rodata._.str.285
+                0x00d23393       0x53 obj/FAIRVIEW.o
+ .rodata._.str.286
+                0x00d233e6        0x5 obj/FAIRVIEW.o
+ .rodata._.str.287
+                0x00d233eb        0x9 obj/FAIRVIEW.o
+ .rodata._.str.288
+                0x00d233f4      0x1c3 obj/FAIRVIEW.o
+ .rodata._.str.289
+                0x00d235b7        0xa obj/FAIRVIEW.o
+ .rodata._.str.290
+                0x00d235c1        0xd obj/FAIRVIEW.o
+ .rodata._.str.291
+                0x00d235ce        0xd obj/FAIRVIEW.o
+ .rodata._.str.292
+                0x00d235db        0xc obj/FAIRVIEW.o
+ .rodata._.str.293
+                0x00d235e7        0x5 obj/FAIRVIEW.o
+ .rodata._.str.294
+                0x00d235ec        0x5 obj/FAIRVIEW.o
+ .rodata._.str.295
+                0x00d235f1       0x11 obj/FAIRVIEW.o
+ .rodata._.str.296
+                0x00d23602        0x6 obj/FAIRVIEW.o
+ .rodata._.str.297
+                0x00d23608       0x26 obj/FAIRVIEW.o
+ .rodata._.str.298
+                0x00d2362e        0xa obj/FAIRVIEW.o
+ .rodata._.str.299
+                0x00d23638        0x5 obj/FAIRVIEW.o
+ .rodata._.str.300
+                0x00d2363d        0xb obj/FAIRVIEW.o
+ .rodata._.str.301
+                0x00d23648        0xa obj/FAIRVIEW.o
+ .rodata._.str.302
+                0x00d23652        0x5 obj/FAIRVIEW.o
+ .rodata._.str.303
+                0x00d23657        0x5 obj/FAIRVIEW.o
+ .rodata._.str.304
+                0x00d2365c        0xb obj/FAIRVIEW.o
+ .rodata._.str.305
+                0x00d23667        0x9 obj/FAIRVIEW.o
+ .rodata._.str.306
+                0x00d23670        0x5 obj/FAIRVIEW.o
+ .rodata._.str.307
+                0x00d23675       0x1a obj/FAIRVIEW.o
+ .rodata._.str.309
+                0x00d2368f       0x13 obj/FAIRVIEW.o
+ .rodata._.str.310
+                0x00d236a2        0x8 obj/FAIRVIEW.o
+ .rodata._.str.311
+                0x00d236aa       0x13 obj/FAIRVIEW.o
+ .rodata._.str.312
+                0x00d236bd        0x2 obj/FAIRVIEW.o
+ .rodata._key_chars
+                0x00d236bf       0x3a obj/FAIRVIEW.o
+                0x00d236bf                _key_chars
+ .rodata._npf_vpprintf
+                0x00d236f9      0x102 obj/FAIRVIEW.o
+ .rodata._vsscanf
+                0x00d237fb       0x63 obj/FAIRVIEW.o
+ .rodata.libload
+                0x00d2385e       0x22 obj/crt0.o
+
+.init_array     0x00d23880        0x0
+                [!provide]                        PROVIDE (__init_array_start = .)
+ *(.preinit_array)
+ *(SORT_BY_INIT_PRIORITY(.init_array.*))
+ *(.init_array)
+                [!provide]                        PROVIDE (__init_array_end = .)
+
+.fini_array     0x00d23880        0x0
+                [!provide]                        PROVIDE (__fini_array_start = .)
+ *(SORT_BY_INIT_PRIORITY(.fini_array.*))
+ *(.fini_array)
+                [!provide]                        PROVIDE (__fini_array_end = .)
+                0x00d23880                        ___data_low = .
+
+.data           0x00d23880      0x519
+ *(.data .data.* .gnu.linkonce.d.*)
+ .data._is_dark_mode
+                0x00d23880        0x1 obj/FAIRVIEW.o
+                0x00d23880                _is_dark_mode
+ .data._current_response
+                0x00d23881      0x4b0 obj/FAIRVIEW.o
+                0x00d23881                _current_response
+ .data._next_suggestion
+                0x00d23d31       0x40 obj/FAIRVIEW.o
+                0x00d23d31                _next_suggestion
+ .data._word_recommendation
+                0x00d23d71       0x10 obj/FAIRVIEW.o
+                0x00d23d71                _word_recommendation
+ .data._study_day
+                0x00d23d81        0x3 obj/FAIRVIEW.o
+                0x00d23d81                _study_day
+ .data._study_days
+                0x00d23d84       0x15 obj/FAIRVIEW.o
+                0x00d23d84                _study_days
+ *(.data1)
+                0x00d23d99                        ___runprgm_reloc_start = .
+ *(.runprgm.reloc)
+                0x00d23d99                        ___runprgm_reloc_end = .
+                0x00d23d99                        ___data_high = .
+                0x00000519                        ___data_len = (___data_high - ___data_low)
+                0x00d052c6                        . = BSSHEAP_LOW
+                0x00d052c6                        ___bss_low = .
+
+.bss            0x00d052c6       0x58
+ *(.dynbss)
+ *(.bss .bss.* .gnu.linkonce.b.*)
+ .bss._user_input
+                0x00d052c6       0x30 obj/FAIRVIEW.o
+                0x00d052c6                _user_input
+ .bss._input_len
+                0x00d052f6        0x3 obj/FAIRVIEW.o
+                0x00d052f6                _input_len
+ .bss._cursor_pos
+                0x00d052f9        0x3 obj/FAIRVIEW.o
+                0x00d052f9                _cursor_pos
+ .bss._scroll_line
+                0x00d052fc        0x3 obj/FAIRVIEW.o
+                0x00d052fc                _scroll_line
+ .bss._response_line_count
+                0x00d052ff        0x3 obj/FAIRVIEW.o
+                0x00d052ff                _response_line_count
+ .bss._quiz_active
+                0x00d05302        0x1 obj/FAIRVIEW.o
+                0x00d05302                _quiz_active
+ .bss._quiz_waiting
+                0x00d05303        0x1 obj/FAIRVIEW.o
+                0x00d05303                _quiz_waiting
+ .bss._flashcards_active
+                0x00d05304        0x1 obj/FAIRVIEW.o
+                0x00d05304                _flashcards_active
+ .bss._flashcard_answer_visible
+                0x00d05305        0x1 obj/FAIRVIEW.o
+                0x00d05305                _flashcard_answer_visible
+ .bss._quiz_index
+                0x00d05306        0x3 obj/FAIRVIEW.o
+                0x00d05306                _quiz_index
+ .bss._quiz_score
+                0x00d05309        0x3 obj/FAIRVIEW.o
+                0x00d05309                _quiz_score
+ .bss._quiz_total
+                0x00d0530c        0x3 obj/FAIRVIEW.o
+                0x00d0530c                _quiz_total
+ .bss._quiz_subject
+                0x00d0530f        0x3 obj/FAIRVIEW.o
+                0x00d0530f                _quiz_subject
+ .bss._flashcard_index
+                0x00d05312        0x3 obj/FAIRVIEW.o
+                0x00d05312                _flashcard_index
+ .bss._pc_cnt.0
+                0x00d05315        0x3 obj/FAIRVIEW.o
+ .bss._pc_cnt.1
+                0x00d05318        0x3 obj/FAIRVIEW.o
+ .bss._pc_cnt.2
+                0x00d0531b        0x3 obj/FAIRVIEW.o
+ *(COMMON)
+                0x00d0531e                        ___bss_high = .
+                0x00000058                        ___bss_len = (___bss_high - ___bss_low)
+                0x00000001                        ASSERT ((. <= BSSHEAP_HIGH), Error: BSS exceed BSSHEAP_HIGH limit)
+                0x00d0531e                        ___heap_low = .
+                0x00d13fd8                        . = BSSHEAP_HIGH
+                0x00d13fd8                        ___heap_high = .
+
+.runprgm
+ *(.runprgm.reloc)
+
+.debug_info
+ *(.debug_info .debug_info.*)
+
+.debug_abbrev
+ *(.debug_abbrev .debug_abbrev.*)
+
+.debug_line
+ *(.debug_line .debug_line.*)
+
+.debug_line_str
+ *(.debug_line_str .debug_line_str.*)
+
+.debug_str
+ *(.debug_str .debug_str.*)
+
+.debug_str_offsets
+ *(.debug_str_offsets .debug_str_offsets.*)
+
+.debug_addr
+ *(.debug_addr .debug_addr.*)
+
+.debug_aranges
+ *(.debug_aranges .debug_aranges.*)
+
+.debug_ranges
+ *(.debug_ranges .debug_ranges.*)
+
+.debug_rnglists
+ *(.debug_rnglists .debug_rnglists.*)
+
+.debug_loc
+ *(.debug_loc .debug_loc.*)
+
+.debug_loclists
+ *(.debug_loclists .debug_loclists.*)
+
+.debug_frame
+ *(.debug_frame .debug_frame.*)
+
+.debug_macro
+ *(.debug_macro .debug_macro.*)
+
+.debug_macinfo
+ *(.debug_macinfo .debug_macinfo.*)
+
+.debug_names
+ *(.debug_names .debug_names.*)
+
+.debug_pubnames
+ *(.debug_pubnames .debug_pubnames.*)
+
+.debug_pubtypes
+ *(.debug_pubtypes .debug_pubtypes.*)
+
+.debug_types
+ *(.debug_types .debug_types.*)
+
+.debug_sup
+ *(.debug_sup .debug_sup.*)
+
+.debug_cu_index
+ *(.debug_cu_index .debug_cu_index.*)
+
+.debug_tu_index
+ *(.debug_tu_index .debug_tu_index.*)
+
+.gdb_index
+ *(.gdb_index)
+
+.debug_gdb_scripts
+ *(.debug_gdb_scripts)
+
+.debug_abbrev.dwo
+ *(.debug_abbrev.dwo .debug_abbrev.dwo.*)
+
+.debug_info.dwo
+ *(.debug_info.dwo .debug_info.dwo.*)
+
+.debug_line.dwo
+ *(.debug_line.dwo .debug_line.dwo.*)
+
+.debug_loclists.dwo
+ *(.debug_loclists.dwo .debug_loclists.dwo.*)
+
+.debug_macro.dwo
+ *(.debug_macro.dwo .debug_macro.dwo.*)
+
+.debug_rnglists.dwo
+ *(.debug_rnglists.dwo .debug_rnglists.dwo.*)
+
+.debug_str.dwo
+ *(.debug_str.dwo .debug_str.dwo.*)
+
+.debug_str_offsets.dwo
+ *(.debug_str_offsets.dwo .debug_str_offsets.dwo.*)
+
+.eh_frame
+ *(.eh_frame)
+
+.eh_frame_hdr
+ *(.eh_frame_hdr)
+
+/DISCARD/
+ *(.comment)
+ *(.note*)
+                [!provide]                        PROVIDE (___runprgm_reloc_len = (___runprgm_reloc_end - ___runprgm_reloc_start))
+LOAD obj/FAIRVIEW.o
+LOAD obj/crt0.o
+START GROUP
+LOAD /tmp/cedev/CEdev/lib/libc/allocator_standard.a
+LOAD /tmp/cedev/CEdev/lib/crt/libcrt.a
+LOAD /tmp/cedev/CEdev/lib/ce/libce.a
+LOAD /tmp/cedev/CEdev/lib/softfloat/libsoftfloat.a
+LOAD /tmp/cedev/CEdev/lib/libc/libc_os.a
+LOAD /tmp/cedev/CEdev/lib/libcxx/libcxx.a
+END GROUP
+OUTPUT(/workspaces/cluster/bin/FAIRVIEW.obj elf32-z80)

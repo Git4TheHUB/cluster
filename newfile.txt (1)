@@ -1060,10 +1060,10 @@ void draw_rounded_rect(int x, int y, int w, int h, unsigned char color) {
     gfx_SetColor(color);
     gfx_FillRectangle(x + 2, y, w - 4, h);
     gfx_FillRectangle(x, y + 2, w, h - 4);
-    gfx_SetPixel(x + 1, y + 1, color);
-    gfx_SetPixel(x + w - 2, y + 1, color);
-    gfx_SetPixel(x + 1, y + h - 2, color);
-    gfx_SetPixel(x + w - 2, y + h - 2, color);
+    gfx_SetPixel(x + 1, y + 1);
+    gfx_SetPixel(x + w - 2, y + 1);
+    gfx_SetPixel(x + 1, y + h - 2);
+    gfx_SetPixel(x + w - 2, y + h - 2);
 }
 
 void draw_ui(void) {
