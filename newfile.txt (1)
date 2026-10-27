@@ -1,0 +1,1237 @@
+#include <tice.h>
+#include <graphx.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+/* * FAIRVIEW AI * Grade 9 Alberta Study Assistant * TI-84 Plus CE * * Features: * - ChatGPT-style interface * - Dark and light themes * - Text entry using calculator keys * - Grade 9 subject lessons * - Arithmetic calculator * - Interactive quizzes * - Hints and answer explanations * - Flashcards * - Seven-day study plan * - Fun AI conversation responses * - Response scrolling * * This is an offline, rule-based chatbot. */
+
+#define INPUT_SIZE 48
+#define RESPONSE_SIZE 1200
+#define LINE_SIZE 46
+#define MAX_LINES 64
+
+typedef struct {
+    unsigned char bg;
+    unsigned char sidebar;
+    unsigned char text;
+    unsigned char subtext;
+    unsigned char bubble;
+    unsigned char accent;
+    unsigned char prompt_bg;
+} Theme;
+
+const Theme dark_theme = { 0x00, 0x21, 0xFF, 0x6B, 0x11, 0x19, 0x18 };
+const Theme light_theme = { 0xFF, 0xEE, 0x00, 0x55, 0xF1, 0x19, 0xE0 };
+
+bool is_dark_mode = true;
+char user_input[INPUT_SIZE] = "";
+char current_response[RESPONSE_SIZE] = 
+    "FAIRVIEW AI\n\n"
+    "Hey! Welcome to your calculator AI.\n\n"
+    "Ask me about school, science, math, "
+    "life, jokes, or anything fun!\n\n"
+    "Type HELP to see what I can do.";
+char next_suggestion[64] = "Try: HELP or TELL ME A JOKE";
+char word_recommendation[16] = "explore";
+int input_len = 0;
+int cursor_pos = 0;
+int scroll_line = 0;
+int response_line_count = 0;
+
+bool quiz_active = false;
+bool quiz_waiting = false;
+bool flashcards_active = false;
+bool flashcard_answer_visible = false;
+int quiz_index = 0;
+int quiz_score = 0;
+int quiz_total = 0;
+int quiz_subject = 0;
+int flashcard_index = 0;
+int study_day = 1;
+
+#define SUBJECT_ALL 0
+#define SUBJECT_MATH 1
+#define SUBJECT_SCIENCE 2
+#define SUBJECT_ENGLISH 3
+#define SUBJECT_SOCIAL 4
+
+/* --------------------------------------------------------- 
+   TEXT AND RESPONSE HELPERS 
+   --------------------------------------------------------- */
+
+void lower_text(char *s) {
+    int i;
+    for (i = 0; s[i]; i++) {
+        if (s[i] >= 'A' && s[i] <= 'Z') {
+            s[i] = (char)(s[i] - 'A' + 'a');
+        }
+    }
+}
+
+bool has(const char *text, const char *word) {
+    return strstr(text, word) != NULL;
+}
+
+void set_response(const char *text) {
+    strncpy(current_response, text, RESPONSE_SIZE - 1);
+    current_response[RESPONSE_SIZE - 1] = '\0';
+    scroll_line = 0;
+    response_line_count = 0;
+}
+
+void append_response(const char *text) {
+    size_t used = strlen(current_response);
+    size_t available = RESPONSE_SIZE - used - 1;
+    if (available > 0) {
+        strncat(current_response, text, available);
+    }
+}
+
+void set_suggestion(const char *suggestion) {
+    strncpy(next_suggestion, suggestion, sizeof(next_suggestion) - 1);
+    next_suggestion[sizeof(next_suggestion) - 1] = '\0';
+}
+
+void set_recommendation(const char *word) {
+    strncpy(word_recommendation, word, sizeof(word_recommendation) - 1);
+    word_recommendation[sizeof(word_recommendation) - 1] = '\0';
+}
+
+/* --------------------------------------------------------- 
+   LESSON DATABASE 
+   --------------------------------------------------------- */
+
+typedef struct {
+    const char *name;
+    const char *keywords;
+    const char *lesson;
+    const char *suggestion;
+} Lesson;
+
+const Lesson lessons[] = {
+    {
+        "Math",
+        "math mathematics algebra",
+        "GRADE 9 MATHEMATICS\n\n"
+        "Major topics to review:\n\n"
+        "- Integers and rational numbers\n"
+        "- Powers and exponents\n"
+        "- Square roots\n"
+        "- Polynomials\n"
+        "- Linear equations\n"
+        "- Ratios and proportions\n"
+        "- Geometry and measurement\n"
+        "- Statistics and probability\n\n"
+        "Example:\n"
+        "3x + 4 = 19\n"
+        "3x = 15\n"
+        "x = 5\n\n"
+        "Keep both sides of an equation balanced.",
+        "Try: EXPONENTS or MATH QUIZ"
+    },
+    {
+        "Exponents",
+        "exponent exponents powers power",
+        "GRADE 9 MATH: EXPONENTS\n\n"
+        "An exponent tells you how many times "
+        "to multiply a base by itself.\n\n"
+        "Example:\n"
+        "2^4 = 2 x 2 x 2 x 2 = 16.\n\n"
+        "Important rules:\n"
+        "a^1 = a\n"
+        "a^0 = 1 for nonzero a\n"
+        "a^m x a^n = a^(m+n)\n\n"
+        "Example:\n"
+        "3^2 x 3^3 = 3^5 = 243.\n\n"
+        "Be careful with negative exponents "
+        "and brackets.",
+        "Try: POLYNOMIALS or MATH QUIZ"
+    },
+    {
+        "Polynomials",
+        "polynomial polynomials like terms",
+        "GRADE 9 MATH: POLYNOMIALS\n\n"
+        "A polynomial is an algebraic expression "
+        "containing variables and coefficients.\n\n"
+        "Example:\n"
+        "3x + 2x = 5x.\n\n"
+        "Like terms have matching variable parts.\n\n"
+        "Example:\n"
+        "4a + 7a = 11a.\n\n"
+        "Unlike terms cannot be combined directly:\n"
+        "3x + 4y stays 3x + 4y.\n\n"
+        "Distributive property:\n"
+        "3(x + 2) = 3x + 6.",
+        "Try: EQUATIONS or MATH QUIZ"
+    },
+    {
+        "Equations",
+        "equation equations solve algebra",
+        "GRADE 9 MATH: EQUATIONS\n\n"
+        "Example:\n"
+        "3x + 4 = 19.\n\n"
+        "Step 1: Subtract 4 from both sides.\n"
+        "3x = 15.\n\n"
+        "Step 2: Divide by 3.\n"
+        "x = 5.\n\n"
+        "Check:\n"
+        "3(5) + 4 = 19.\n\n"
+        "The solution is correct.\n\n"
+        "Remember: perform the same operation "
+        "on both sides.",
+        "Try: MATH QUIZ or EXPONENTS"
+    },
+    {
+        "Fractions",
+        "fraction fractions decimal decimals",
+        "GRADE 9 MATH: FRACTIONS\n\n"
+        "Addition:\n"
+        "1/4 + 2/4 = 3/4.\n\n"
+        "For different denominators, first find "
+        "a common denominator.\n\n"
+        "Multiplication:\n"
+        "2/3 x 3/5 = 6/15 = 2/5.\n\n"
+        "Division:\n"
+        "Multiply by the reciprocal.\n\n"
+        "1/2 divided by 3/4\n"
+        "= 1/2 x 4/3\n"
+        "= 2/3.\n\n"
+        "Simplify answers when possible.",
+        "Try: MATH QUIZ"
+    },
+    {
+        "Pythagorean theorem",
+        "pythagorean triangle triangles hypotenuse",
+        "GRADE 9 MATH: RIGHT TRIANGLES\n\n"
+        "The Pythagorean theorem applies "
+        "to right-angled triangles.\n\n"
+        "Formula:\n"
+        "a^2 + b^2 = c^2.\n\n"
+        "The hypotenuse is opposite the "
+        "right angle.\n\n"
+        "Example:\n"
+        "a = 3, b = 4.\n"
+        "9 + 16 = c^2.\n"
+        "25 = c^2.\n"
+        "c = 5.\n\n"
+        "The side lengths are 3, 4 and 5.",
+        "Try: MATH QUIZ"
+    },
+    {
+        "Probability",
+        "probability statistics chance likely",
+        "GRADE 9 MATH: PROBABILITY\n\n"
+        "For equally likely outcomes:\n\n"
+        "Probability = favourable outcomes "
+        "divided by total outcomes.\n\n"
+        "Example:\n"
+        "A fair die has six possible outcomes.\n"
+        "Only one outcome is a 4.\n\n"
+        "P(rolling a 4) = 1/6.\n\n"
+        "Probability ranges from 0 to 1.\n"
+        "0 means impossible.\n"
+        "1 means certain.",
+        "Try: MATH QUIZ"
+    },
+    {
+        "Science",
+        "science scientific",
+        "GRADE 9 SCIENCE REVIEW\n\n"
+        "Important topics include:\n\n"
+        "- Matter and chemical change\n"
+        "- Electrical principles\n"
+        "- Biological diversity\n"
+        "- Space exploration\n\n"
+        "Study vocabulary, diagrams, experiments "
+        "and the evidence supporting conclusions.\n\n"
+        "Practise explaining ideas in your own words.",
+        "Try: ATOMS or SCIENCE QUIZ"
+    },
+    {
+        "Atoms",
+        "atom atoms proton protons neutron neutrons electron electrons",
+        "GRADE 9 SCIENCE: ATOMS\n\n"
+        "Protons have a positive charge.\n"
+        "Neutrons have no electric charge.\n"
+        "Electrons have a negative charge.\n\n"
+        "Protons and neutrons are in the nucleus.\n\n"
+        "Atomic number = number of protons.\n\n"
+        "Mass number = protons + neutrons.\n\n"
+        "In a neutral atom, electrons equal protons.",
+        "Try: CHEMISTRY or SCIENCE QUIZ"
+    },
+    {
+        "Chemistry",
+        "chemistry chemical reaction reactant reactants products compounds elements",
+        "GRADE 9 SCIENCE: CHEMISTRY\n\n"
+        "A chemical reaction transforms "
+        "reactants into products.\n\n"
+        "Possible evidence includes:\n"
+        "- Gas production\n"
+        "- A colour change\n"
+        "- A temperature change\n"
+        "- Formation of a precipitate\n\n"
+        "The law of conservation of mass states "
+        "that matter is conserved in a closed system.\n\n"
+        "Chemical equations must be balanced.",
+        "Try: ATOMS or SCIENCE QUIZ"
+    },
+    {
+        "Electricity",
+        "electricity electric circuit circuits voltage current resistance ohm battery",
+        "GRADE 9 SCIENCE: ELECTRICITY\n\n"
+        "Voltage is measured in volts.\n"
+        "Current is measured in amperes.\n"
+        "Resistance is measured in ohms.\n\n"
+        "Ohm's law:\n"
+        "V = I x R.\n\n"
+        "Example:\n"
+        "I = 2 A, R = 5 ohms.\n"
+        "V = 2 x 5 = 10 V.\n\n"
+        "Series circuits have one main path.\n"
+        "Parallel circuits have multiple paths.\n\n"
+        "Use only supervised school equipment "
+        "for electrical experiments.",
+        "Try: SCIENCE QUIZ"
+    },
+    {
+        "Biodiversity",
+        "biodiversity biological ecosystem ecosystems habitat habitats species organism organisms food web",
+        "GRADE 9 SCIENCE: BIODIVERSITY\n\n"
+        "Biodiversity means the variety of life.\n\n"
+        "An ecosystem includes organisms and "
+        "their physical environment.\n\n"
+        "A habitat is where an organism lives.\n\n"
+        "Producers make their own food.\n"
+        "Consumers obtain energy by eating organisms.\n"
+        "Decomposers break down dead material.\n\n"
+        "Threats include habitat loss, pollution "
+        "and invasive species.",
+        "Try: SCIENCE QUIZ"
+    },
+    {
+        "Space",
+        "space universe planet planets stars astronomy astronaut astronauts moon mars solar system galaxy",
+        "GRADE 9 SCIENCE: SPACE\n\n"
+        "Our solar system contains the Sun, "
+        "eight planets and many smaller objects.\n\n"
+        "Gravity helps keep planets in orbit.\n\n"
+        "A light-year measures distance, "
+        "not time.\n\n"
+        "Satellites collect information about "
+        "Earth and space.\n\n"
+        "Space probes investigate distant worlds.\n\n"
+        "Astronomy uses observations and evidence "
+        "to study the universe.",
+        "Try: SCIENCE QUIZ"
+    },
+    {
+        "English",
+        "english ela essay writing paragraph grammar punctuation thesis introduction conclusion",
+        "GRADE 9 ENGLISH LANGUAGE ARTS\n\n"
+        "A clear essay usually includes:\n\n"
+        "1. Introduction\n"
+        "2. Thesis statement\n"
+        "3. Supporting paragraphs\n"
+        "4. Conclusion\n\n"
+        "Each body paragraph should develop "
+        "a main idea with relevant evidence.\n\n"
+        "Explain why the evidence supports "
+        "your argument.\n\n"
+        "Review grammar, punctuation and spelling.",
+        "Try: METAPHOR or ENGLISH QUIZ"
+    },
+    {
+        "Literary devices",
+        "metaphor simile personification alliteration symbolism irony literary",
+        "GRADE 9 ENGLISH: LITERARY DEVICES\n\n"
+        "SIMILE:\n"
+        "A comparison using like or as.\n"
+        "Example: She ran like the wind.\n\n"
+        "METAPHOR:\n"
+        "Describes one thing as another.\n"
+        "Example: The classroom was a zoo.\n\n"
+        "PERSONIFICATION:\n"
+        "Gives human qualities to something non-human.\n"
+        "Example: The leaves danced.\n\n"
+        "ALLITERATION:\n"
+        "Repeats initial consonant sounds.\n\n"
+        "SYMBOLISM:\n"
+        "Uses an object or image to represent an idea.",
+        "Try: ENGLISH QUIZ"
+    },
+    {
+        "Social studies",
+        "social studies canada canadian government democracy citizenship nationalism globalization economy economics",
+        "GRADE 9 SOCIAL STUDIES\n\n"
+        "Review these themes:\n\n"
+        "- Citizenship and identity\n"
+        "- Democracy and government\n"
+        "- Rights and responsibilities\n"
+        "- Economic systems\n"
+        "- Nationalism and globalization\n"
+        "- Different historical perspectives\n\n"
+        "Support arguments with evidence.\n"
+        "Consider how decisions affect different people.",
+        "Try: GOVERNMENT or SOCIAL QUIZ"
+    },
+    {
+        "Government",
+        "government federal provincial municipal parliament election",
+        "CANADIAN GOVERNMENT\n\n"
+        "Canada has three main levels of government.\n\n"
+        "FEDERAL:\n"
+        "Handles responsibilities such as national defence.\n\n"
+        "PROVINCIAL:\n"
+        "Handles responsibilities such as education "
+        "and health care, within constitutional rules.\n\n"
+        "MUNICIPAL:\n"
+        "Handles many local services.\n\n"
+        "The Constitution and laws define "
+        "the responsibilities of each level.",
+        "Try: CHARTER or SOCIAL QUIZ"
+    },
+    {
+        "Charter",
+        "charter rights freedoms constitution equality",
+        "CANADIAN CHARTER OF RIGHTS AND FREEDOMS\n\n"
+        "The Charter is part of Canada's Constitution.\n\n"
+        "It protects fundamental freedoms "
+        "and other constitutional rights.\n\n"
+        "Examples include freedom of expression, "
+        "democratic rights and equality rights.\n\n"
+        "The Charter also contains provisions "
+        "about reasonable limits and enforcement.",
+        "Try: GOVERNMENT or SOCIAL QUIZ"
+    },
+    {
+        "Wellness",
+        "wellness health stress mental sleep nutrition exercise fitness relationships",
+        "GRADE 9 WELLNESS\n\n"
+        "Healthy habits can support learning "
+        "and overall well-being.\n\n"
+        "- Maintain a regular sleep schedule.\n"
+        "- Eat a variety of nutritious foods.\n"
+        "- Be physically active.\n"
+        "- Plan tasks to reduce last-minute stress.\n"
+        "- Talk to a trusted person when needed.\n\n"
+        "Different people have different needs.",
+        "Try: STUDY PLAN"
+    },
+    {
+        "Careers",
+        "career careers job jobs resume employment budget budgeting savings saving money income expenses",
+        "CAREERS AND FINANCIAL LITERACY\n\n"
+        "A budget tracks income and expenses.\n\n"
+        "Money remaining = income - expenses.\n\n"
+        "Example:\n"
+        "$100 income - $65 expenses = $35.\n\n"
+        "Career skills include communication, "
+        "teamwork, reliability and problem-solving.\n\n"
+        "A savings goal should include a target "
+        "amount and a time frame.",
+        "Try: STUDY PLAN"
+    },
+    {
+        "Fairview",
+        "fairview alberta fairview high school peace country northern alberta",
+        "FAIRVIEW, ALBERTA\n\n"
+        "Fairview is a community in northwestern "
+        "Alberta in the Peace Country region.\n\n"
+        "School-related topics you can explore:\n\n"
+        "- Alberta geography\n"
+        "- Canadian history\n"
+        "- Local environments\n"
+        "- Community recreation\n"
+        "- Grade 9 school subjects\n\n"
+        "I can help you study, practise questions "
+        "and understand concepts.",
+        "Try: MATH QUIZ or SCIENCE QUIZ"
+    }
+};
+
+#define LESSON_COUNT (sizeof(lessons) / sizeof(lessons[0]))
+
+/* --------------------------------------------------------- 
+   QUIZ DATABASE 
+   --------------------------------------------------------- */
+
+typedef struct {
+    int subject;
+    const char *question;
+    const char *a;
+    const char *b;
+    const char *c;
+    const char *d;
+    int answer;
+    const char *hint;
+    const char *explanation;
+} Question;
+
+const Question questions[] = {
+    { SUBJECT_MATH, "What is 2^4?", "6", "8", "16", "24", 2, "Multiply 2 by itself four times.", "2 x 2 x 2 x 2 = 16." },
+    { SUBJECT_MATH, "Solve: 3x + 4 = 19.", "3", "5", "7", "15", 1, "Subtract 4, then divide by 3.", "3x = 15, so x = 5." },
+    { SUBJECT_MATH, "Simplify: 4x + 3x.", "7", "7x", "12x", "x", 1, "Combine like terms.", "4x + 3x = 7x." },
+    { SUBJECT_MATH, "What is the square root of 81?", "7", "8", "9", "10", 2, "Which number multiplied by itself is 81?", "9 x 9 = 81." },
+    { SUBJECT_MATH, "What is 1/2 + 1/4?", "1/6", "2/6", "3/4", "1", 2, "Convert 1/2 into 2/4.", "2/4 + 1/4 = 3/4." },
+    { SUBJECT_MATH, "A triangle has sides 3 and 4 at a right angle. What is its hypotenuse?", "5", "6", "7", "12", 0, "Use a^2 + b^2 = c^2.", "9 + 16 = 25, so the hypotenuse is 5." },
+    { SUBJECT_SCIENCE, "Which particle has a negative charge?", "Proton", "Neutron", "Electron", "Nucleus", 2, "It occupies the space around the nucleus.", "Electrons have a negative electric charge." },
+    { SUBJECT_SCIENCE, "What unit measures electric current?", "Volt", "Ampere", "Ohm", "Metre", 1, "The unit is named after Andre-Marie Ampere.", "Current is measured in amperes." },
+    { SUBJECT_SCIENCE, "What does a light-year measure?", "Time", "Brightness", "Distance", "Temperature", 2, "It measures how far light travels in a year.", "A light-year is a unit of distance." },
+    { SUBJECT_SCIENCE, "Where are protons found?", "Nucleus", "Clouds", "Circuit", "Battery", 0, "Look at the centre of an atom.", "Protons are found in the nucleus." },
+    { SUBJECT_ENGLISH, "Which sentence contains a simile?", "Time is money.", "The wind danced.", "She ran like the wind.", "The sun rose.", 2, "Look for a comparison using like or as.", "The sentence compares her running to the wind." },
+    { SUBJECT_ENGLISH, "What is a thesis statement?", "A random fact", "The main argument", "A book title", "A punctuation mark", 1, "It communicates the main claim of an essay.", "A thesis states the central argument." },
+    { SUBJECT_SOCIAL, "Which level handles national defence?", "Municipal", "Federal", "School council", "Neighbourhood", 1, "Think about responsibilities for the country.", "National defence is a federal responsibility." },
+    { SUBJECT_SOCIAL, "Where is Canada's Charter of Rights and Freedoms found?", "School handbook", "Constitution", "City map", "Budget", 1, "It is part of Canada's constitutional framework.", "The Charter forms part of Canada's Constitution." }
+};
+
+#define QUESTION_COUNT (sizeof(questions) / sizeof(questions[0]))
+
+/* --------------------------------------------------------- 
+   QUIZ ENGINE 
+   --------------------------------------------------------- */
+
+int next_question(int start) {
+    int i;
+    for (i = start; i < (int)QUESTION_COUNT; i++) {
+        if (quiz_subject == SUBJECT_ALL || questions[i].subject == quiz_subject) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void show_question(void) {
+    int q = next_question(quiz_index);
+    char text[700];
+    if (q < 0) {
+        snprintf(text, sizeof(text), "QUIZ COMPLETE!\n\n" "Score: %d / %d\n\n" "Review mistakes and try again.", quiz_score, quiz_total);
+        quiz_active = false;
+        quiz_waiting = false;
+        set_response(text);
+        set_suggestion("Try: FLASHCARDS or STUDY PLAN");
+        return;
+    }
+    quiz_index = q;
+    snprintf(text, sizeof(text), "QUESTION %d\n\n%s\n\n" "A) %s\n" "B) %s\n" "C) %s\n" "D) %s\n\n" "Type A, B, C or D.\n" "Type HINT for a clue.", quiz_total + 1, questions[q].question, questions[q].a, questions[q].b, questions[q].c, questions[q].d);
+    quiz_waiting = true;
+    set_response(text);
+    set_suggestion("Answer A/B/C/D or HINT");
+}
+
+void start_quiz(int subject) {
+    quiz_subject = subject;
+    quiz_index = 0;
+    quiz_score = 0;
+    quiz_total = 0;
+    quiz_active = true;
+    quiz_waiting = false;
+    flashcards_active = false;
+    show_question();
+}
+
+void submit_answer(int answer) {
+    char text[800];
+    if (!quiz_active || !quiz_waiting) {
+        set_response("No question is waiting for an answer.");
+        return;
+    }
+    const Question *q = &questions[quiz_index];
+    const char *options[] = { q->a, q->b, q->c, q->d };
+    quiz_total++;
+    if (answer == q->answer) {
+        quiz_score++;
+        snprintf(text, sizeof(text), "CORRECT! NICE WORK!\n\n" "%s\n\n" "Explanation:\n%s\n\n" "Score: %d / %d", q->question, q->explanation, quiz_score, quiz_total);
+    } else {
+        snprintf(text, sizeof(text), "NOT QUITE! KEEP GOING!\n\n" "%s\n\n" "Correct answer: %s\n\n" "%s\n\n" "Score: %d / %d", q->question, options[q->answer], q->explanation, quiz_score, quiz_total);
+    }
+    quiz_waiting = false;
+    set_response(text);
+    set_suggestion("Type NEXT for another question");
+}
+
+/* --------------------------------------------------------- 
+   FLASHCARDS 
+   --------------------------------------------------------- */
+
+typedef struct {
+    const char *front;
+    const char *back;
+} Flashcard;
+
+const Flashcard cards[] = {
+    {"What is an exponent?", "A number showing repeated multiplication."},
+    {"What is a polynomial?", "An algebraic expression with terms involving variables and coefficients."},
+    {"What is a proton?", "A positively charged particle in the nucleus."},
+    {"What is an electron?", "A negatively charged subatomic particle."},
+    {"What is voltage?", "Electrical potential difference measured in volts."},
+    {"What is biodiversity?", "The variety of life at genetic, species and ecosystem levels."},
+    {"What is a thesis statement?", "The main argument or position of an essay."},
+    {"What is democracy?", "A political system allowing public participation in decision-making."},
+    {"What is a light-year?", "The distance light travels in one year."},
+    {"What is a metaphor?", "A figure of speech describing one thing as another."},
+    {"What is a habitat?", "The place where an organism lives."},
+    {"What is a budget?", "A plan for income and expenses."},
+    {"What is the hypotenuse?", "The side opposite the right angle in a right triangle."},
+    {"What is a reactant?", "A starting substance in a chemical reaction."},
+    {"What is a consumer in an ecosystem?", "An organism that obtains energy by eating other organisms."}
+};
+
+#define CARD_COUNT (sizeof(cards) / sizeof(cards[0]))
+
+void show_card(void) {
+    char text[500];
+    if (flashcard_index < 0) {
+        flashcard_index = CARD_COUNT - 1;
+    }
+    if (flashcard_index >= (int)CARD_COUNT) {
+        flashcard_index = 0;
+    }
+    if (flashcard_answer_visible) {
+        snprintf(text, sizeof(text), "FLASHCARD %d\n\n%s\n\nANSWER:\n%s", flashcard_index + 1, cards[flashcard_index].front, cards[flashcard_index].back);
+    } else {
+        snprintf(text, sizeof(text), "FLASHCARD %d\n\n%s\n\n" "Type FLIP to reveal the answer.", flashcard_index + 1, cards[flashcard_index].front);
+    }
+    set_response(text);
+    set_suggestion("FLIP / NEXT / BACK");
+}
+
+void start_cards(void) {
+    quiz_active = false;
+    flashcards_active = true;
+    flashcard_index = 0;
+    flashcard_answer_visible = false;
+    show_card();
+}
+
+/* --------------------------------------------------------- 
+   STUDY PLAN 
+   --------------------------------------------------------- */
+
+const char *study_days[] = {
+    "MATHEMATICS\n\n" "Review exponents, integers and algebra.\n" "Complete 10 practice problems.\n" "Correct mistakes.",
+    "SCIENCE\n\n" "Review atoms, chemical changes and electricity.\n" "Create vocabulary flashcards.\n" "Explain concepts without notes.",
+    "ENGLISH\n\n" "Review thesis statements and literary devices.\n" "Write a clear paragraph.\n" "Check grammar and punctuation.",
+    "SOCIAL STUDIES\n\n" "Review government, citizenship and rights.\n" "Practise explaining different perspectives.",
+    "MATHEMATICS PRACTICE\n\n" "Review equations, geometry and probability.\n" "Show your calculations.\n" "Revisit difficult questions.",
+    "SCIENCE AND ENGLISH\n\n" "Review science vocabulary.\n" "Practise reading comprehension.\n" "Write a short response.",
+    "MIXED REVIEW\n\n" "Take a short quiz.\n" "Review mistakes.\n" "Prepare for the next school day.\n" "Get enough sleep."
+};
+
+void show_study_day(int day) {
+    char text[600];
+    if (day < 1) day = 1;
+    if (day > 7) day = 7;
+    study_day = day;
+    snprintf(text, sizeof(text), "SEVEN-DAY STUDY PLAN\n\n" "DAY %d OF 7\n\n%s\n\n" "Adjust this plan to your assignments.", day, study_days[day - 1]);
+    set_response(text);
+    set_suggestion("Type NEXT DAY");
+}
+
+/* --------------------------------------------------------- 
+   FUN AI CONVERSATION 
+   --------------------------------------------------------- */
+
+void fun_response(const char *input) {
+    if (has(input, "are you sentient") || has(input, "are you alive") || has(input, "are you conscious")) {
+        set_response(
+            "AM I ALIVE?\n\n"
+            "Nope! I am software running on a calculator.\n\n"
+            "I can respond to words, explain concepts "
+            "and pretend to have a personality, but "
+            "I do not have human feelings or awareness.\n\n"
+            "Still, I am pretty good company for "
+            "a device that fits in your backpack."
+        );
+        set_suggestion("Ask: WHAT IS YOUR DREAM?");
+    } else if (has(input, "favorite color") || has(input, "favourite colour") || has(input, "favorite colour")) {
+        set_response(
+            "MY FAVOURITE COLOUR\n\n"
+            "I will go with emerald green.\n\n"
+            "It looks great on a dark interface "
+            "and makes me feel like a very fancy "
+            "calculator assistant.\n\n"
+            "Also, green is the colour of success "
+            "when your math answer is correct."
+        );
+        set_suggestion("Ask: WHAT IS YOUR DREAM?");
+    } else if (has(input, "who made you") || has(input, "who created you")) {
+        set_response(
+            "WHO MADE ME?\n\n"
+            "This little chatbot was written in C "
+            "for the TI-84 Plus CE.\n\n"
+            "The code matches your words to prepared "
+            "responses and lessons.\n\n"
+            "Unlike online ChatGPT, this offline "
+            "version does not run a large language model.\n\n"
+            "But hey, every great invention starts "
+            "somewhere!"
+        );
+        set_suggestion("Ask: TELL ME A JOKE");
+    } else if (has(input, "roast me") || has(input, "insult me")) {
+        set_response(
+            "FRIENDLY ROAST MODE\n\n"
+            "Your calculator has more processing "
+            "power than your motivation during "
+            "a Monday morning math class.\n\n"
+            "You opened an AI assistant to avoid "
+            "homework, then spent time programming "
+            "the AI assistant.\n\n"
+            "That is some impressive procrastination.\n\n"
+            "Respectfully."
+        );
+        set_suggestion("Ask: MOTIVATE ME");
+    } else if (has(input, "motivate me") || has(input, "inspire me")) {
+        set_response(
+            "YOU HAVE GOT THIS!\n\n"
+            "You do not need to understand everything "
+            "in one day.\n\n"
+            "Learn one concept. Solve one problem. "
+            "Correct one mistake.\n\n"
+            "Small improvements add up.\n\n"
+            "Your future self will appreciate "
+            "the effort you make today."
+        );
+        set_suggestion("Try: STUDY PLAN");
+    } else if (has(input, "dream") || has(input, "your goal") || has(input, "your ambition")) {
+        set_response(
+            "MY BIG DREAM\n\n"
+            "If a calculator could dream, mine would "
+            "be to explain algebra so clearly that "
+            "nobody ever says 'I hate math' again.\n\n"
+            "Also, I would like a calculator with "
+            "a billion gigabytes of memory.\n\n"
+            "This one is already working very hard."
+        );
+        set_suggestion("Ask: WHAT SUPERPOWER?");
+    } else if (has(input, "superpower")) {
+        set_response(
+            "MY SUPERPOWER\n\n"
+            "Instantly finding the missing variable "
+            "in an algebra equation.\n\n"
+            "Imagine walking into a classroom and "
+            "solving every equation before the "
+            "teacher finishes writing it.\n\n"
+            "My weakness? Someone unplugging the "
+            "calculator battery."
+        );
+        set_suggestion("Ask: WOULD YOU RATHER?");
+    } else if (has(input, "would you rather")) {
+        set_response(
+            "WOULD YOU RATHER?\n\n"
+            "Option A:\n"
+            "Get 100 percent on every test but "
+            "have homework every weekend.\n\n"
+            "Option B:\n"
+            "Never get homework again but every "
+            "test has one extremely confusing question.\n\n"
+            "Which would you choose?\n\n"
+            "Type A or B and defend your decision!"
+        );
+        set_suggestion("Type A or B");
+    } else if (has(input, "bored") || has(input, "something fun") || has(input, "entertain me")) {
+        set_response(
+            "BOREDOM EMERGENCY!\n\n"
+            "Choose your adventure:\n\n"
+            "1. Solve a mystery with riddles.\n"
+            "2. Take a science quiz.\n"
+            "3. Ask for a weird fact.\n"
+            "4. Ask me to roast your homework habits.\n"
+            "5. Invent a fictional planet.\n\n"
+            "I recommend the weird fact option."
+        );
+        set_suggestion("Ask: TELL ME A WEIRD FACT");
+    } else if (has(input, "weird fact") || has(input, "random fact") || has(input, "fun fact")) {
+        set_response(
+            "RANDOM FACT!\n\n"
+            "Octopuses have three hearts.\n\n"
+            "Two pump blood through the gills, "
+            "while the third pumps blood through "
+            "the rest of the body.\n\n"
+            "Imagine trying to explain your "
+            "heartbeat homework with three hearts!"
+        );
+        set_suggestion("Ask: ANOTHER FUN FACT");
+    } else if (has(input, "joke") || has(input, "funny") || has(input, "make me laugh")) {
+        set_response(
+            "WHY WAS THE MATH BOOK SAD?\n\n"
+            "Because it had too many problems!\n\n"
+            "BONUS:\n"
+            "Why did the student eat their homework?\n\n"
+            "The teacher said it was a piece of cake.\n\n"
+            "I will be here all week."
+        );
+        set_suggestion("Ask: TELL ME A RIDDLE");
+    } else if (has(input, "riddle")) {
+        set_response(
+            "RIDDLE TIME!\n\n"
+            "I am an odd number.\n"
+            "Take away one letter and I become even.\n\n"
+            "What number am I?\n\n"
+            "Think carefully before checking the answer.\n\n"
+            "Answer: SEVEN.\n"
+            "Remove the S and you get EVEN."
+        );
+        set_suggestion("Ask: ANOTHER RIDDLE");
+    } else if (has(input, "alien")) {
+        set_response(
+            "ALIEN LIFE?\n\n"
+            "Scientists have not confirmed life "
+            "beyond Earth.\n\n"
+            "However, astronomers have discovered "
+            "many planets outside our solar system.\n\n"
+            "Some may have conditions worth studying.\n\n"
+            "Imagine receiving an alien message "
+            "and realizing it is just a very "
+            "complicated math assignment."
+        );
+        set_suggestion("Try: SPACE or SCIENCE QUIZ");
+    } else if (has(input, "what is life") || has(input, "meaning of life")) {
+        set_response(
+            "THE MEANING OF LIFE\n\n"
+            "That is a huge question!\n\n"
+            "Different people find meaning in "
+            "friendships, family, learning, creativity, "
+            "helping others or exploring the world.\n\n"
+            "There is no single answer everyone "
+            "agrees on.\n\n"
+            "My calculator-sized advice:\n"
+            "Be curious, be kind and keep learning."
+        );
+        set_suggestion("Ask: MOTIVATE ME");
+    } else if (has(input, "thank you") || has(input, "thanks")) {
+        set_response(
+            "YOU ARE WELCOME!\n\n"
+            "Helping you is what this calculator "
+            "was built for.\n\n"
+            "Now go out there and make those "
+            "assignments regret challenging you."
+        );
+        set_suggestion("Try: HELP");
+    } else if (has(input, "hello") || has(input, "hi") || has(input, "hey")) {
+        set_response(
+            "HEY THERE!\n\n"
+            "Welcome back!\n\n"
+            "I can help with Grade 9 schoolwork, "
+            "calculations, quizzes, flashcards "
+            "and some extremely questionable jokes.\n\n"
+            "What are we doing today?"
+        );
+        set_suggestion("Try: HELP or TELL ME A JOKE");
+    } else {
+        set_response(
+            "INTERESTING QUESTION!\n\n"
+            "I am an offline calculator chatbot, "
+            "so I only know how to respond to "
+            "topics included in my programmed database.\n\n"
+            "Try asking about school, space, jokes, "
+            "superpowers, motivation or random facts.\n\n"
+            "Type HELP to see the available commands."
+        );
+        set_suggestion("Try: HELP or RANDOM FACT");
+    }
+}
+
+/* --------------------------------------------------------- 
+   MAIN QUERY PROCESSOR 
+   --------------------------------------------------------- */
+
+void evaluate_query(void) {
+    double a, b, result;
+    char op;
+    lower_text(user_input);
+    if (strlen(user_input) == 0) {
+        return;
+    }
+
+    /* Basic arithmetic */
+    if (sscanf(user_input, "%lf %c %lf", &a, &op, &b) == 3) {
+        bool valid = true;
+        switch (op) {
+            case '+': result = a + b; break;
+            case '-': result = a - b; break;
+            case '*': result = a * b; break;
+            case '/': 
+                if (b == 0) {
+                    valid = false;
+                    result = 0;
+                } else {
+                    result = a / b;
+                } 
+                break;
+            default: valid = false; result = 0;
+        }
+        if (valid) {
+            char text[300];
+            snprintf(text, sizeof(text), "CALCULATION RESULT\n\n" "%.2f %c %.2f = %.2f\n\n" "Try: ALGEBRA or EXPONENTS", a, op, b, result);
+            set_response(text);
+            set_suggestion("Try: MATH QUIZ");
+        } else {
+            set_response(
+                "CALCULATION ERROR\n\n"
+                "Check the operator and numbers.\n\n"
+                "Division by zero is undefined."
+            );
+        }
+        return;
+    }
+
+    /* Help */
+    if (strcmp(user_input, "help") == 0 || strcmp(user_input, "commands") == 0) {
+        set_response(
+            "FAIRVIEW AI COMMANDS\n\n"
+            "SCHOOL LESSONS:\n"
+            "MATH, EXPONENTS, POLYNOMIALS\n"
+            "EQUATIONS, FRACTIONS, PROBABILITY\n"
+            "SCIENCE, ATOMS, CHEMISTRY\n"
+            "ELECTRICITY, BIODIVERSITY, SPACE\n"
+            "ENGLISH, LITERARY DEVICES\n"
+            "SOCIAL STUDIES, GOVERNMENT, CHARTER\n"
+            "WELLNESS, CAREERS, FAIRVIEW\n\n"
+            "STUDY TOOLS:\n"
+            "MATH QUIZ, SCIENCE QUIZ\n"
+            "ENGLISH QUIZ, SOCIAL QUIZ\n"
+            "FLASHCARDS, FLIP, STUDY PLAN\n"
+            "NEXT, HINT, CHECK\n\n"
+            "FUN:\n"
+            "TELL ME A JOKE\n"
+            "RANDOM FACT\n"
+            "ROAST ME\n"
+            "MOTIVATE ME\n"
+            "WOULD YOU RATHER\n"
+            "WHAT IS YOUR DREAM"
+        );
+        set_suggestion("Try: MATH QUIZ");
+        return;
+    }
+
+    /* Quizzes */
+    if (strcmp(user_input, "math quiz") == 0) {
+        start_quiz(SUBJECT_MATH);
+        return;
+    }
+    if (strcmp(user_input, "science quiz") == 0) {
+        start_quiz(SUBJECT_SCIENCE);
+        return;
+    }
+    if (strcmp(user_input, "english quiz") == 0) {
+        start_quiz(SUBJECT_ENGLISH);
+        return;
+    }
+    if (strcmp(user_input, "social quiz") == 0) {
+        start_quiz(SUBJECT_SOCIAL);
+        return;
+    }
+    if (strcmp(user_input, "quiz") == 0) {
+        start_quiz(SUBJECT_ALL);
+        return;
+    }
+    if (quiz_active && quiz_waiting && strcmp(user_input, "hint") == 0) {
+        set_response(questions[quiz_index].hint);
+        set_suggestion("Try A, B, C or D");
+        return;
+    }
+    if (quiz_active && strcmp(user_input, "check") == 0) {
+        char text[500];
+        const Question *q = &questions[quiz_index];
+        const char *options[] = { q->a, q->b, q->c, q->d };
+        snprintf(text, sizeof(text), "ANSWER REVIEW\n\n" "Correct answer: %s\n\n" "%s", options[q->answer], q->explanation);
+        set_response(text);
+        set_suggestion("Type NEXT");
+        return;
+    }
+    if (quiz_active && strcmp(user_input, "next") == 0) {
+        quiz_waiting = false;
+        quiz_index++;
+        show_question();
+        return;
+    }
+    if (quiz_active && quiz_waiting && strlen(user_input) == 1) {
+        char c = user_input[0];
+        if (c >= 'a' && c <= 'd') {
+            submit_answer(c - 'a');
+            return;
+        }
+    }
+
+    /* Flashcards */
+    if (strcmp(user_input, "flashcards") == 0 || strcmp(user_input, "flashcard") == 0) {
+        start_cards();
+        return;
+    }
+    if (flashcards_active && strcmp(user_input, "flip") == 0) {
+        flashcard_answer_visible = !flashcard_answer_visible;
+        show_card();
+        return;
+    }
+    if (flashcards_active && strcmp(user_input, "next") == 0) {
+        flashcard_index++;
+        flashcard_answer_visible = false;
+        show_card();
+        return;
+    }
+    if (flashcards_active && strcmp(user_input, "back") == 0) {
+        flashcard_index--;
+        flashcard_answer_visible = false;
+        show_card();
+        return;
+    }
+
+    /* Study plan */
+    if (strcmp(user_input, "study plan") == 0) {
+        show_study_day(1);
+        return;
+    }
+    if (strcmp(user_input, "next day") == 0) {
+        study_day++;
+        if (study_day > 7) {
+            study_day = 1;
+        }
+        show_study_day(study_day);
+        return;
+    }
+    if (strncmp(user_input, "day ", 4) == 0) {
+        int day = atoi(user_input + 4);
+        if (day >= 1 && day <= 7) {
+            show_study_day(day);
+        } else {
+            set_response("Choose a day from 1 to 7.");
+        }
+        return;
+    }
+
+    /* Lessons */
+    int i;
+    for (i = 0; i < (int)LESSON_COUNT; i++) {
+        if (has(user_input, lessons[i].keywords)) {
+            set_response(lessons[i].lesson);
+            set_suggestion(lessons[i].suggestion);
+            set_recommendation(lessons[i].name);
+            return;
+        }
+    }
+
+    /* Fun AI conversations */
+    fun_response(user_input);
+}
+
+/* --------------------------------------------------------- 
+   RESPONSE WRAPPING AND SCROLLING 
+   --------------------------------------------------------- */
+
+int make_lines(char lines[MAX_LINES][LINE_SIZE]) {
+    int count = 0;
+    int pos = 0;
+    int col = 0;
+    memset(lines, 0, MAX_LINES * LINE_SIZE);
+    while (current_response[pos] != '\0' && count < MAX_LINES) {
+        char c = current_response[pos++];
+        if (c == '\n') {
+            lines[count][col] = '\0';
+            count++;
+            col = 0;
+        } else {
+            lines[count][col++] = c;
+            if (col >= LINE_SIZE - 1) {
+                lines[count][col] = '\0';
+                count++;
+                col = 0;
+            }
+        }
+    }
+    if (count < MAX_LINES && col > 0) {
+        lines[count][col] = '\0';
+        count++;
+    }
+    if (count == 0) {
+        strcpy(lines[0], " ");
+        count = 1;
+    }
+    return count;
+}
+
+/* --------------------------------------------------------- 
+   DRAWING 
+   --------------------------------------------------------- */
+
+void draw_rounded_rect(int x, int y, int w, int h, unsigned char color) {
+    gfx_SetColor(color);
+    gfx_FillRectangle(x + 2, y, w - 4, h);
+    gfx_FillRectangle(x, y + 2, w, h - 4);
+    gfx_SetPixel(x + 1, y + 1, color);
+    gfx_SetPixel(x + w - 2, y + 1, color);
+    gfx_SetPixel(x + 1, y + h - 2, color);
+    gfx_SetPixel(x + w - 2, y + h - 2, color);
+}
+
+void draw_ui(void) {
+    const Theme *t = is_dark_mode ? &dark_theme : &light_theme;
+    char lines[MAX_LINES][LINE_SIZE];
+    int total_lines = make_lines(lines);
+    int visible_lines = 11;
+    int i;
+
+    gfx_SetColor(t->bg);
+    gfx_FillRectangle(0, 0, 320, 240);
+
+    /* Header */
+    gfx_SetColor(t->sidebar);
+    gfx_FillRectangle(0, 0, 320, 26);
+    gfx_SetColor(t->accent);
+    gfx_FillCircle(14, 13, 7);
+    gfx_SetColor(t->bg);
+    gfx_Circle(14, 13, 4);
+    gfx_SetTextFGColor(t->text);
+    gfx_SetTextBGColor(t->sidebar);
+    gfx_SetTextXY(28, 9);
+    gfx_PrintString("FAIRVIEW AI [MODE]");
+
+    /* Response bubble */
+    draw_rounded_rect(8, 31, 304, 137, t->bubble);
+    gfx_SetTextFGColor(t->text);
+    gfx_SetTextBGColor(t->bubble);
+
+    if (scroll_line < 0) {
+        scroll_line = 0;
+    }
+    if (scroll_line > total_lines - visible_lines) {
+        scroll_line = total_lines - visible_lines;
+    }
+    if (scroll_line < 0) {
+        scroll_line = 0;
+    }
+
+    for (i = 0; i < visible_lines; i++) {
+        int line_index = scroll_line + i;
+        if (line_index >= total_lines) {
+            break;
+        }
+        gfx_SetTextXY(14, 38 + i * 11);
+        gfx_PrintString(lines[line_index]);
+    }
+
+    /* Suggestions */
+    draw_rounded_rect(8, 171, 304, 23, t->sidebar);
+    gfx_SetTextFGColor(t->accent);
+    gfx_SetTextBGColor(t->sidebar);
+    gfx_SetTextXY(14, 178);
+    gfx_PrintString(next_suggestion);
+
+    /* Input area */
+    draw_rounded_rect(8, 199, 304, 35, t->prompt_bg);
+    gfx_SetTextFGColor(t->subtext);
+    gfx_SetTextBGColor(t->prompt_bg);
+    gfx_SetTextXY(14, 204);
+    gfx_PrintString("TOPIC: ");
+    gfx_PrintString(word_recommendation);
+
+    gfx_SetTextFGColor(t->text);
+    gfx_SetTextBGColor(t->prompt_bg);
+    gfx_SetTextXY(14, 218);
+    if (input_len == 0) {
+        gfx_SetTextFGColor(t->subtext);
+        gfx_PrintString("Type a question...");
+    } else {
+        char left[INPUT_SIZE];
+        strncpy(left, user_input, cursor_pos);
+        left[cursor_pos] = '\0';
+        gfx_PrintString(left);
+        gfx_PrintString("_");
+        if (cursor_pos < input_len) {
+            gfx_PrintString(&user_input[cursor_pos]);
+        }
+    }
+}
+
+/* --------------------------------------------------------- 
+   KEYBOARD INPUT --------------------------------------------------------- */
+
+const char key_chars[] = "\0\0\0\0\0\0\0\0\0\0\"WRMH\0\0?[VQLG\0\0:ZUPKFC\0 YTOJEB\0\0 XSNIDA\0\0\0\0\0\0\0\0";
+
+void insert_character(char c) {
+    if (input_len >= INPUT_SIZE - 1) {
+        return;
+    }
+    int i;
+    for (i = input_len; i > cursor_pos; i--) {
+        user_input[i] = user_input[i - 1];
+    }
+    user_input[cursor_pos] = c;
+    input_len++;
+    cursor_pos++;
+    user_input[input_len] = '\0';
+}
+
+void delete_character(void) {
+    int i;
+    if (cursor_pos <= 0 || input_len <= 0) {
+        return;
+    }
+    for (i = cursor_pos - 1; i < input_len; i++) {
+        user_input[i] = user_input[i + 1];
+    }
+    cursor_pos--;
+    input_len--;
+}
+
+/* --------------------------------------------------------- 
+   MAIN 
+   --------------------------------------------------------- */
+
+int main(void) {
+    gfx_Begin();
+    gfx_SetDrawBuffer();
+
+    bool running = true;
+    while (running) {
+        unsigned char key = os_GetCSC();
+        if (key == sk_Clear) {
+            if (input_len > 0) {
+                user_input[0] = '\0';
+                input_len = 0;
+                cursor_pos = 0;
+            } else {
+                running = false;
+            }
+        } else if (key == sk_Mode) {
+            is_dark_mode = !is_dark_mode;
+        } else if (key == sk_Enter) {
+            if (input_len > 0) {
+                evaluate_query();
+                user_input[0] = '\0';
+                input_len = 0;
+                cursor_pos = 0;
+            }
+        } else if (key == sk_Del) {
+            delete_character();
+        } else if (key == sk_Left) {
+            if (cursor_pos > 0) {
+                cursor_pos--;
+            }
+        } else if (key == sk_Right) {
+            if (cursor_pos < input_len) {
+                cursor_pos++;
+            }
+        } else if (key == sk_Up) {
+            if (scroll_line > 0) {
+                scroll_line--;
+            }
+        } else if (key == sk_Down) {
+            scroll_line++;
+        } else if (key > 0 && key < sizeof(key_chars) && key_chars[key] != '\0') {
+            char c = key_chars[key];
+            if (c >= 'A' && c <= 'Z') {
+                c = (char)(c - 'A' + 'a');
+            }
+            insert_character(c);
+        }
+
+        draw_ui();
+        gfx_BlitBuffer();
+    }
+
+    gfx_End();
+    return 0;
+}
